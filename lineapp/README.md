@@ -4,6 +4,7 @@ cd lineapp
 python -m venv venv
 
 ## 仮想環境有効化
+cd lineapp
 .\venv\Scripts\activate
 
 ## ライブラリ有効化
