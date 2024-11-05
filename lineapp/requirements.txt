@@ -1,0 +1,6 @@
+Django==4.2.5
+psycopg2-binary==2.9.9
+python-jose==3.3.0
+ulid-py==1.1.0
+colorama==0.4.6
+Pillow==10.4.0
