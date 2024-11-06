@@ -80,7 +80,7 @@ DATABASES = {
         'NAME': 'naruto',  
         'USER': 'postgres',  
         'PASSWORD': 'Tzk7jN1KhNsGP5Gy', 
-        'HOST': '127.0.0.1',  
+        'HOST': 'prod-db-instance.cvegir20ptgl.ap-northeast-1.rds.amazonaws.com',  
         'PORT': '5432',  
     }
 }
