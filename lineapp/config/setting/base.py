@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-+4&d!+r#1k96_jxa@#10wp$ve50hh%v%i8=k^y)v9f+yf^kkf+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,7 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 'lineapp', 
+    'api.shop', 
+    'api.order', 
+    'api.user', 
+    'api.chat', 
 ]
 
 MIDDLEWARE = [
@@ -50,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'project.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -68,6 +71,7 @@ TEMPLATES = [
     },
 ]
 
+<<<<<<< HEAD:lineapp/project/settings.py
 WSGI_APPLICATION = 'project.wsgi.application'
 
 
@@ -85,6 +89,9 @@ DATABASES = {
     }
 }
 
+=======
+WSGI_APPLICATION = 'config.wsgi.application'
+>>>>>>> f8936f24034148436a8982ce33184d93b9d686db:lineapp/config/setting/base.py
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -108,9 +115,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "ja-jp"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "Asia/Tokyo"
 
 USE_I18N = True
 
