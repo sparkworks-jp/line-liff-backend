@@ -21,7 +21,7 @@ class UserAddress(models.Model):
     deleted_flag = models.BooleanField(null=True, blank=True, db_comment='削除フラグ')
 
     class Meta:
-        db_table = 'line.user_addresses'
+        db_table = 'user_addresses'
         db_table_comment = '住所'
 
 
@@ -44,7 +44,7 @@ class User(models.Model):
     created_by = models.CharField(max_length=256, null=True, blank=True, db_comment='登録者')
 
     class Meta:
-        db_table = 'line.users'
+        db_table = 'users'
         db_table_comment = 'ユーザー'
 
 

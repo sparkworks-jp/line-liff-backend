@@ -6,6 +6,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         model = Order
         fields = '__all__'
 
+
 class OrderUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order

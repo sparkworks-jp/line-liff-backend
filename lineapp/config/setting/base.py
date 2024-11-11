@@ -71,8 +71,7 @@ TEMPLATES = [
     },
 ]
 
-<<<<<<< HEAD:lineapp/project/settings.py
-WSGI_APPLICATION = 'project.wsgi.application'
+WSGI_APPLICATION = 'config.setting.wsgi.application'
 
 
 # Database
@@ -88,10 +87,7 @@ DATABASES = {
         'PORT': '5432',  
     }
 }
-
-=======
 WSGI_APPLICATION = 'config.wsgi.application'
->>>>>>> f8936f24034148436a8982ce33184d93b9d686db:lineapp/config/setting/base.py
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

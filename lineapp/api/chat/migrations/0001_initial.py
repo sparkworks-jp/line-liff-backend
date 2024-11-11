@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True, db_comment='作成日時')),
             ],
             options={
-                'db_table': 'line.chat_histories',
+                'db_table': 'chat_histories',
                 'db_table_comment': 'チャット歴史',
             },
         ),

@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('created_by', models.CharField(blank=True, db_comment='登録者', max_length=256, null=True)),
             ],
             options={
-                'db_table': 'line.users',
+                'db_table': 'users',
                 'db_table_comment': 'ユーザー',
             },
         ),
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                 ('deleted_flag', models.BooleanField(blank=True, db_comment='削除フラグ', null=True)),
             ],
             options={
-                'db_table': 'line.user_addresses',
+                'db_table': 'user_addresses',
                 'db_table_comment': '住所',
             },
         ),

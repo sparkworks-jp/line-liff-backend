@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                 ('deleted_flag', models.BooleanField(blank=True, db_comment='削除フラグ', null=True)),
             ],
             options={
-                'db_table': 'line.orders',
+                'db_table': 'orders',
                 'db_table_comment': '注文',
             },
         ),
@@ -60,7 +60,7 @@ class Migration(migrations.Migration):
                 ('deleted_flag', models.BooleanField(blank=True, db_comment='削除フラグ', null=True)),
             ],
             options={
-                'db_table': 'line.order_items',
+                'db_table': 'order_items',
                 'db_table_comment': '注文アイテム',
             },
         ),

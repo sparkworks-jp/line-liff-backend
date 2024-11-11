@@ -3,6 +3,7 @@ class Product(models.Model):
     product_id = models.CharField(max_length=50, primary_key=True, db_comment='商品番号')
     product_name = models.CharField(max_length=255, db_comment='商品名')
     description = models.TextField(null=True, blank=True, db_comment='商品説明')
+    allergens = models.CharField(max_length=255, null=True, blank=True, db_comment='アレルゲン')  
     product_price = models.IntegerField(db_comment='商品価格')
     product_marque = models.CharField(max_length=100, null=True, blank=True, db_comment='商品型番:商品型号，待定')
     product_store_barcode = models.CharField(max_length=100, null=True, blank=True, db_comment='商品の倉庫バーコード')
@@ -15,5 +16,5 @@ class Product(models.Model):
     deleted_flag = models.BooleanField(null=True, blank=True, db_comment='削除フラグ')
 
     class Meta:
-        db_table = 'line.products'
+        db_table = 'products'
         db_table_comment = '商品'

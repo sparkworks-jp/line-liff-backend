@@ -13,5 +13,5 @@ class ChatHistory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_comment='作成日時')
 
     class Meta:
-        db_table = 'line.chat_histories'
+        db_table = 'chat_histories'
         db_table_comment = 'チャット歴史'
