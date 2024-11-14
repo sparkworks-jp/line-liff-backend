@@ -6,6 +6,7 @@ from rest_framework import status
 from .models import Product
 from .serializers import ProductSerializer
 from django.shortcuts import get_object_or_404
+from api.line_auth import line_auth_required
 
 # @api_view(['POST'])
 # def create_product(request):
@@ -22,9 +23,13 @@ def get_product(request, product_id):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@line_auth_required
 def list_products(request):
     products = Product.objects.all()
+    print("原始image值:", products.first().image)
     serializer = ProductSerializer(products, many=True)
+    print("序列化后image值:", serializer.data[0]['image'])
+
     return Response(serializer.data)
 
 # @api_view(['PUT'])
