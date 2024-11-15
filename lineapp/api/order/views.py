@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # check ページの支払いボタンには注文情報が保存され、注文ステータスは未払いです。
 @api_view(['POST'])
-@line_auth_required
+# @line_auth_required
 def create_order(request):
     logger.info(f"CREATE ORDER: {request.data.get('userName', 'Unknown')}")
     logger.info("CREATE ORDER data: {request.data}")

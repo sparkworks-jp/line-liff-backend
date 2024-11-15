@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'api.line_auth.LineAuthMiddleware', 
+    # 'api.line_auth.LineAuthMiddleware', 
 ]
 
 CORS_ALLOWED_ORIGINS = [
