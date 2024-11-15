@@ -1,4 +1,3 @@
-# api/line_auth.py
 from functools import wraps
 import jwt
 import requests
@@ -6,6 +5,7 @@ import logging
 from django.http import JsonResponse
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class LineAuthentication:
         logger.info("1. LINE公開鍵の取得を開始")
         try:
             response = requests.get(
-                'https://api.line.me/oauth2/v2.1/keys',
+                'https://api.line.me/oauth2/v2.1/certs',
                 timeout=10
             )
             logger.info(f"2. LINE APIレスポンス: status={response.status_code}")
@@ -38,48 +38,73 @@ class LineAuthentication:
     def verify_id_token(self, id_token):
         """LINE IDトークンを検証"""
         try:
-            logger.info("4. トークン検証開始")
-            # トークンの先頭部分のみログ出力（セキュリティのため）
-            logger.info(f"4-1. 検証するトークン: {id_token[:20]}...")
+            logger.info("=== トークン検証開始 ===")
+            logger.info(f"設定されているLIFF ID: {settings.LINE_LIFF_ID}")
             
-            # トークンヘッダーからkidとアルゴリズムを取得
+            # 解码 token 查看实际的 audience（无需验证签名）
+            try:
+                unverified_payload = jwt.decode(id_token, options={
+                    "verify_signature": False,
+                    "verify_exp": False,
+                    "verify_aud": False
+                })
+                logger.info(f"トークンの中身: {unverified_payload}")
+                logger.info(f"トークンのaudience: {unverified_payload.get('aud')}")
+
+                # LINE LIFF SDK 的行为 - 它在生成 token 时可能只使用了 channel ID 作为 audience。
+                token_aud = unverified_payload.get('aud')
+                setting_channel_id = settings.LINE_LIFF_ID.split('-')[0] 
+                if token_aud != setting_channel_id:
+                    logger.error(f"Channel ID不一致: token={token_aud}, setting={setting_channel_id}")
+                    raise jwt.InvalidTokenError(
+                        f"Channel ID不一致: トークン={token_aud}, 設定={setting_channel_id}"
+                    )
+            except Exception as e:
+                logger.error(f"トークン解析エラー: {str(e)}")
+                raise
+
+            # 获取 token 头部信息
             header = jwt.get_unverified_header(id_token)
             kid = header.get('kid')
             alg = header.get('alg', 'RS256')
-            logger.info(f"5. トークンヘッダー情報: kid={kid}, alg={alg}")
-
-            # 公開鍵を取得
+            logger.info(f"トークンヘッダー情報: kid={kid}, alg={alg}")
+            
+            if not kid:
+                raise jwt.InvalidTokenError('トークンヘッダーにkidがありません')
+                
+            # 获取公钥
             keys = self.get_line_keys()
             key = next((k for k in keys if k['kid'] == kid), None)
+            
             if not key:
-                logger.error(f"6. 対応する公開鍵が見つかりません。kid={kid}")
                 raise jwt.InvalidTokenError('対応する公開鍵が見つかりません')
-            logger.info("6. 対応する公開鍵を発見")
-
-            # トークンを検証
+                
+            # 验证签名并解码
             jwk_algorithm = jwt.algorithms.ECAlgorithm if alg == 'ES256' else jwt.algorithms.RSAAlgorithm
-            logger.info(f"7. トークン検証開始: アルゴリズム={alg}")
+            public_key = jwk_algorithm.from_jwk(key)
             
             decoded = jwt.decode(
                 id_token,
-                jwk_algorithm.from_jwk(key),
+                public_key,
                 algorithms=[alg],
-                audience=settings.LINE_LIFF_ID,
+                audience=setting_channel_id,
                 issuer='https://access.line.me'
             )
             
-            logger.info("8. トークン検証成功")
-            logger.debug(f"8-1. デコード結果: {decoded}")
+            logger.info("トークン検証成功")
+            logger.debug(f"検証結果: {decoded}")
             return decoded
-
-        except jwt.ExpiredSignatureError as e:
-            logger.error("X. トークン期限切れ", exc_info=True)
+                
+        except jwt.ExpiredSignatureError:
+            logger.error("トークン期限切れ")
             raise Exception('トークンの有効期限が切れています')
+            
         except jwt.InvalidTokenError as e:
-            logger.error(f"X. 無効なトークン: {str(e)}", exc_info=True)
+            logger.error(f"無効なトークン: {str(e)}")
             raise Exception(f'無効なトークンです: {str(e)}')
+            
         except Exception as e:
-            logger.error(f"X. 検証エラー: {str(e)}", exc_info=True)
+            logger.error(f"検証エラー: {str(e)}")
             raise Exception(f'トークン検証エラー: {str(e)}')
 
 
@@ -92,13 +117,13 @@ class LineAuthMiddleware(MiddlewareMixin):
         logger.info(f"リクエストパス: {request.path}")
         logger.debug(f"リクエストヘッダー: {dict(request.headers)}")
 
-        # 認証除外パス
+        # 认证豁免路径检查
         EXEMPT_PATHS = ['/admin/', '/api/webhook/', '/api/public/', '/static/']
         if any(request.path.startswith(path) for path in EXEMPT_PATHS):
             logger.info(f"認証除外パス: {request.path}")
             return None
 
-        # Authorizationヘッダーの検証
+        # 验证 Authorization 头
         auth_header = request.headers.get('Authorization', '')
         logger.info(f"Authorizationヘッダー: {auth_header[:30]}...")
 
@@ -107,12 +132,23 @@ class LineAuthMiddleware(MiddlewareMixin):
             return JsonResponse({'error': '認証が必要です'}, status=401)
 
         try:
-            # トークンを検証してユーザー情報を取得
+            # 验证 token 并获取用户信息
             token = auth_header.split(' ')[1]
             auth = LineAuthentication()
             user_info = auth.verify_id_token(token)
+            logger.debug(f"verify_id_token 返回值: {user_info}")
+
+            # 添加额外的验证确保 user_info 不为 None
+            if user_info is None:
+                logger.error("トークン検証でユーザー情報が取得できませんでした")
+                return JsonResponse({'error': 'トークン検証に失敗しました'}, status=401)
             
-            # ユーザー情報をrequestに追加
+            # 确保必要的字段存在
+            if 'sub' not in user_info:
+                logger.error("ユーザーIDが見つかりません")
+                return JsonResponse({'error': 'ユーザー情報が不完全です'}, status=401)
+            
+            # 设置用户信息
             request.line_user = user_info
             request.line_user_id = user_info.get('sub')
             logger.info(f"認証成功: user_id={request.line_user_id}")
