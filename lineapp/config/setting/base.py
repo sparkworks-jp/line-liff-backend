@@ -16,9 +16,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -31,17 +28,14 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 
-# Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core.apps.CoreConfig',
     'corsheaders',
-    'api.line_auth', 
     'api.shop', 
     'api.order', 
     'api.user', 
@@ -55,10 +49,9 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'api.line_auth.LineAuthMiddleware', 
+    'core.middleware.line_auth.LineAuthMiddleware', 
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -102,6 +95,9 @@ DATABASES = {
         'PASSWORD': 'Tzk7jN1KhNsGP5Gy', 
         'HOST': 'prod-db-instance.cvegir20ptgl.ap-northeast-1.rds.amazonaws.com',  
         'PORT': '5432',  
+        'OPTIONS': {
+            'options': '-c search_path=line,public'
+        },
     }
 }
 WSGI_APPLICATION = 'config.wsgi.application'
@@ -131,7 +127,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'api.line_auth': {  
+        'core.middleware.line_auth': {  
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': True,

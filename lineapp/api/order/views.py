@@ -15,7 +15,7 @@ from .serializers import (
 )
 import ulid
 import logging
-from api.line_auth import line_auth_required
+from core.middleware.line_auth import line_auth_required
 
 
 logger = logging.getLogger(__name__)

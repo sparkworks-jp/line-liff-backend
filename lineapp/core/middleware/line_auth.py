@@ -6,6 +6,8 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 from datetime import datetime
+from django.db import transaction
+import ulid
 
 logger = logging.getLogger(__name__)
 
@@ -111,19 +113,61 @@ class LineAuthentication:
 class LineAuthMiddleware(MiddlewareMixin):
     """LINE認証ミドルウェア"""
 
+    def get_or_create_user(self, line_user_info):
+        """LINEユーザー情報から、システムユーザーを取得または作成"""
+        from api.user.models import User 
+        line_user_id = line_user_info.get('sub')
+        
+        try:
+            with transaction.atomic():
+                # LINE IDでユーザーを検索
+                try:
+                    user = User.objects.get(
+                        line_user_id=line_user_id,
+                        deleted_flag=False
+                    )
+                    logger.info(f"既存ユーザーを検出: user_id={user.id}")
+                    return user
+                except User.DoesNotExist:
+                    # ユーザーが存在しない場合、新規作成
+                    logger.info(f"新規ユーザーを作成: line_user_id={line_user_id}")
+                    
+                    # LINE情報から基本データを取得
+                    email = line_user_info.get('email', '')
+                    name = line_user_info.get('name', f'LINE_{line_user_id[:8]}')
+                    
+                    # 新規ユーザーを作成
+                    user = User.objects.create(
+                        id=str(ulid.new()),  
+                        line_user_id=line_user_id,
+                        mail=email,
+                        user_name=name,
+                        gender='',
+                        role=1,
+                        phone_number='',
+                        created_by=line_user_id,
+                        updated_by=line_user_id
+                    )
+                    
+                    logger.info(f"新規ユーザー作成完了: user_id={user.id}")
+                    return user
+                    
+        except Exception as e:
+            logger.error(f"ユーザー取得/作成エラー: {str(e)}", exc_info=True)
+            raise
+
     def process_request(self, request):
         """リクエストの認証処理"""
         logger.info(f"===== 認証処理開始 =====")
         logger.info(f"リクエストパス: {request.path}")
-        logger.debug(f"リクエストヘッダー: {dict(request.headers)}")
 
-        # 认证豁免路径检查
-        EXEMPT_PATHS = ['/admin/', '/api/webhook/', '/api/public/', '/static/']
+        # 認証除外パスの確認
+        EXEMPT_PATHS = [ '/api/webhook/', '/api/public/', '/static/']
         if any(request.path.startswith(path) for path in EXEMPT_PATHS):
             logger.info(f"認証除外パス: {request.path}")
             return None
 
-        # 验证 Authorization 头
+        # Authorization ヘッダーの確認
         auth_header = request.headers.get('Authorization', '')
         logger.info(f"Authorizationヘッダー: {auth_header[:30]}...")
 
@@ -132,26 +176,24 @@ class LineAuthMiddleware(MiddlewareMixin):
             return JsonResponse({'error': '認証が必要です'}, status=401)
 
         try:
-            # 验证 token 并获取用户信息
+            # トークン検証とユーザー情報取得
             token = auth_header.split(' ')[1]
             auth = LineAuthentication()
-            user_info = auth.verify_id_token(token)
-            logger.debug(f"verify_id_token 返回值: {user_info}")
+            line_user_info = auth.verify_id_token(token)
 
-            # 添加额外的验证确保 user_info 不为 None
-            if user_info is None:
-                logger.error("トークン検証でユーザー情報が取得できませんでした")
-                return JsonResponse({'error': 'トークン検証に失敗しました'}, status=401)
-            
-            # 确保必要的字段存在
-            if 'sub' not in user_info:
-                logger.error("ユーザーIDが見つかりません")
+            if not line_user_info or 'sub' not in line_user_info:
+                logger.error("ユーザー情報が不完全です")
                 return JsonResponse({'error': 'ユーザー情報が不完全です'}, status=401)
+
+            # システムユーザーの取得または作成
+            user = self.get_or_create_user(line_user_info)
             
-            # 设置用户信息
-            request.line_user = user_info
-            request.line_user_id = user_info.get('sub')
-            logger.info(f"認証成功: user_id={request.line_user_id}")
+            # リクエストにユーザー情報を設定
+            request.user = user
+            request.line_user = line_user_info
+            request.line_user_id = line_user_info.get('sub')
+            
+            logger.info(f"認証成功: user_id={user.id}, line_user_id={request.line_user_id}")
             
         except Exception as e:
             logger.error(f"認証失敗: {str(e)}", exc_info=True)
