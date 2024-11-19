@@ -23,7 +23,7 @@ def get_product(request, product_id):
     return Response(serializer.data)
 
 @api_view(['GET'])
-@line_auth_required
+# @line_auth_required
 def list_products(request):
     products = Product.objects.all()
     print("原始image值:", products.first().image)
