@@ -11,6 +11,15 @@ import ulid
 
 logger = logging.getLogger(__name__)
 
+# LINE Token验证 (LineAuthMiddleware)
+# ↓
+# token有效 -> 获取/创建用户
+# ↓
+# DRF认证 (CustomAuthentication)
+# 只检查:
+# 1. user是否存在(中间件是否成功)
+# 2. deleted_flag状态
+
 class LineAuthentication:
     """LINE認証ツール"""
 
