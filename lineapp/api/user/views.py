@@ -5,10 +5,9 @@ import ulid
 from django.shortcuts import render
 from rest_framework.decorators import api_view
 
-from api.line_auth import line_auth_required
 from api.user.models import UserAddress
 from api.user.serializers import UserAddressSerializer
-from common.base_view import BaseAPIView
+# from common.base_view import BaseAPIView
 from rest_framework import status
 from rest_framework.response import Response
 
