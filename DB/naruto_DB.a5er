@@ -1,7 +1,7 @@
 ﻿# A5:ER FORMAT:18
 # A5:ER ENCODING:UTF8
 # A5:ER Mk-1 Copyright © 2007 m.matsubara
-# A5:SQL Mk-2 Version 2.19.0 Copyright © 1997 - 2024 m.matsubara
+# A5:SQL Mk-2 Version 2.19.2 Copyright © 1997 - 2024 m.matsubara
 #  https://a5m2.mmatsubara.com
 
 [Manager]
@@ -68,10 +68,12 @@ Field="性別","gender ","char(1)",,,"","m:man f:female",$00000000,""
 Field="電話番号","phone_number","character varying(20)","NOT NULL",,"","",$FFFFFFFF,""
 Field="作成日時","created_at","timestamp(6) without time zone",,,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
 Field="更新日時","updated_at","timestamp(6) without time zone",,,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
+Field="更新者","updated_by","character varying(256) ",,,"","",$FFFFFFFF,""
+Field="登録者","created_by","character varying(256) ",,,"","",$FFFFFFFF,""
 EffectMode=None
 Color=$000000
 BkColor=$FFFFFF
-ModifiedDateTime=20241105161659
+ModifiedDateTime=20241119141245
 Position="MAIN",1600,200,332,417
 ZOrder=1
 
@@ -111,8 +113,8 @@ Comment=
 TableInnerOption=
 TableOption=
 Page=MAIN
-Left=1598
-Top=806
+Left=1600
+Top=800
 Field="注文番号","order_id","character varying(50)","NOT NULL",0,"","",$000000FF,""
 Field="ユーザーID","user_id","character varying(50)","NOT NULL",,"","",$000000FF,""
 Field="注文作成日","order_date","timestamp(6) without time zone","NOT NULL",,"","",$FFFFFFFF,""
@@ -128,11 +130,14 @@ Field="支払日","payment_date","timestamp(6) without time zone",,,"","",$FFFFF
 Field="支払い番号","payment_id","character varying(10)",,,"","paypay　支払い番号",$00000000,""
 Field="作成日時","created_at","timestamp(6) without time zone",,,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
 Field="更新日時","updated_at","timestamp(6) without time zone",,,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
+Field="更新者","updated_by ","character varying(256)",,,"","",$FFFFFFFF,""
+Field="登録者","created_by","character varying(256)",,,"","",$FFFFFFFF,""
+Field="削除フラグ","deleted_flag ","boolean",,,"","",$FFFFFFFF,""
 EffectMode=None
 Color=$000000
 BkColor=$FFFFFF
-ModifiedDateTime=20241105163724
-Position="MAIN",1598,806,337,369
+ModifiedDateTime=20241119140534
+Position="MAIN",1600,800,337,503
 ZOrder=34
 
 [Entity]
@@ -153,12 +158,18 @@ Field="商品の倉庫バーコード","product_store_barcode","character varyin
 Field="商品サイズ情報","product_size_information","character varying(255)",,,"","（json数组-重量，体积，规格等）",$0079009A,""
 Field="販売状況","sale_status","@INT",,,"","\Q01販売中，02販売停止\Q",$00000000,""
 Field="作成日時","created_at","timestamp(6) without time zone",,,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
+Field="詳細サイトURL","webpageUrl\t","character varying(2083)",,,"","",$FFFFFFFF,""
+Field="商品画像URL ","image ","character varying(100)",,,"","",$FFFFFFFF,""
+Field="アレルゲン","allergens ","text",,,"","",$FFFFFFFF,""
+Field="更新者","updated_by    ","character varying(256)",,,"","",$FFFFFFFF,""
+Field="登録者","created_by    ","character varying(256)   ",,,"","",$FFFFFFFF,""
+Field="削除フラグ","deleted_flag    ","boolean                        ",,,"","",$FFFFFFFF,""
 Field="更新日時","updated_at","timestamp(6) without time zone",,,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
 EffectMode=None
 Color=$000000
 BkColor=$FFFFFF
-ModifiedDateTime=20241105164539
-Position="MAIN",2350,1200,377,370
+ModifiedDateTime=20241119141002
+Position="MAIN",2350,1200,377,468
 ZOrder=33
 
 [Relation]
@@ -214,7 +225,7 @@ Fields1=user_id
 Fields2=id
 Cardinarity1=
 Cardinarity2=
-Position="MAIN",0,6584,3552,7255,R,R,""
+Position="MAIN",0,6584,3552,7286,R,R,""
 Dependence=0
 Caption=
 PName=
@@ -222,7 +233,7 @@ ModifiedDateTime=20241031155610
 LineMode=0
 Bar1=658
 Bar2=355
-Bar3=726
+Bar3=729
 TermPos1=R
 TermPos2=R
 ZOrder=39
@@ -249,13 +260,16 @@ Field="地区","district_address","character varying(255)",,,"","地区-道玄�
 Field="具体アドレス","detail_address","character varying(255)","NOT NULL",,"","具体地址----街道-建筑物-门牌号",$FFFFFFFF,""
 Field="郵便番号","postal_code","character varying(50)","NOT NULL",,"","",$FFFFFFFF,""
 Field="デフォルトの住所 ","is_default","@BOOLEAN","NOT NULL",,"false","",$00000000,""
-Field="作成日時","created_at","timestamp(6) without time zone","NOT NULL",,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
 Field="更新日時","updated_at","timestamp(6) without time zone",,,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
+Field="作成日時","created_at","timestamp(6) without time zone","NOT NULL",,"CURRENT_TIMESTAMP","",$FFFFFFFF,""
+Field="更新者","updated_by","character varying(256)  ",,,"","",$FFFFFFFF,""
+Field="登録者","created_by "," character varying(256)",,,"","",$FFFFFFFF,""
+Field="削除フラグ","deleted_flag","boolean ",,,"","",$FFFFFFFF,""
 EffectMode=None
 Color=$000000
 BkColor=$FFFFFF
-ModifiedDateTime=20241105175028
-Position="MAIN",750,50,313,392
+ModifiedDateTime=20241119141148
+Position="MAIN",750,50,313,448
 ZOrder=41
 
 [Relation]
@@ -267,7 +281,7 @@ Fields1=address_id
 Fields2=id
 Cardinarity1=
 Cardinarity2=
-Position="MAIN",0,6448,6753,2105,R,R,""
+Position="MAIN",0,6448,6753,3330,R,R,""
 Dependence=0
 Caption=
 PName=
@@ -275,7 +289,7 @@ ModifiedDateTime=20241101124749
 LineMode=0
 Bar1=645
 Bar2=675
-Bar3=210
+Bar3=333
 TermPos1=R
 TermPos2=R
 ZOrder=45
@@ -315,13 +329,13 @@ Fields1=id
 Fields2=chat_id
 Cardinarity1=
 Cardinarity2=
-Position="MAIN",0,3678,8437,2779,R,R,""
+Position="MAIN",0,8577,8437,2779,R,R,""
 Dependence=1
 Caption=
 PName=
 ModifiedDateTime=20241031172324
 LineMode=0
-Bar1=368
+Bar1=858
 Bar2=844
 Bar3=278
 TermPos1=R
@@ -344,3 +358,36 @@ Top=740
 ZOrder=48
 Width=343
 Height=266
+
+[Entity]
+PName=NEW_ENTITY5
+LName=order_items
+Comment=
+TableInnerOption=
+TableOption=
+Page=MAIN
+Left=2750
+Top=600
+Field="id","id","bigint","NOT NULL",0,"","",$000000FF,""
+Field="注文番号","order_id","character varying(50)","NOT NULL",,"","",$000000FF,""
+Field="商品番号","product_id","character varying(50)","NOT NULL",,"","",$000000FF,""
+Field="商品名","product_name","character varying(255)","NOT NULL",,"","",$FFFFFFFF,""
+Field="商品価格","product_price","integer","NOT NULL",,"","",$FFFFFFFF,""
+Field="商品サイズ情報","product_size_information","integer",,,"","（json数组-重量，体积，规格等）_具体待定",$0079009A,""
+Field="倉庫バーコード","product_store_barcode","character varying(100)",,,"","",$FFFFFFFF,""
+Field="割引率","discount_rate","numeric(10, 2)",,,"","",$FFFFFFFF,""
+Field="割引金額","discount_amount","integer",,,"","",$FFFFFFFF,""
+Field="購入数量","account","integer","NOT NULL",,"","",$FFFFFFFF,""
+Field="小計金額","subtotal","integer","NOT NULL",,"","",$0079009A,""
+Field="顧客の商品の備考","remark","text",,,"","",$FFFFFFFF,""
+Field="作成日時","created_at","timestamp(6) with time zone","NOT NULL",,"","",$FFFFFFFF,""
+Field="更新日時","updated_at","timestamp(6) with time zone","NOT NULL",,"","",$FFFFFFFF,""
+Field="更新者","updated_by","character varying(256)",,,"","",$FFFFFFFF,""
+Field="登録者","created_by","character varying(256)",,,"","",$FFFFFFFF,""
+Field="削除フラグ","deleted_flag","boolean",,,"","",$FFFFFFFF,""
+EffectMode=None
+Color=$000000
+BkColor=$FFFFFF
+ModifiedDateTime=20241119140153
+Position="MAIN",2750,600,328,505
+ZOrder=53
