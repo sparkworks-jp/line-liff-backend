@@ -7,9 +7,10 @@ from rest_framework.decorators import api_view
 
 from api.user.models import UserAddress
 from api.user.serializers import UserAddressSerializer
-# from common.base_view import BaseAPIView
 from rest_framework import status
 from rest_framework.response import Response
+
+from core.middleware.line_auth import line_auth_required
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,13 @@ logger = logging.getLogger(__name__)
 # @line_auth_required
 def get_address_list(request):
 
+    logger.info("----------------get_address_list-------------------")
+
+    # Todo
     # user_id = request.user_id
-    user_id = "01JCQFAYQW3W54S7P3PPM4M7DG"
+    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
+
+
     user_address_list = UserAddress.objects.filter(user_id=user_id, deleted_flag=False)
 
     address_list = []
@@ -39,6 +45,7 @@ def get_address_list(request):
             address_list.append(address_info)
 
     response = {
+        'status': 'success',
         "message": "住所の一览情報が正常に取得されました。",
         "errors": [],
         "data": {
@@ -52,15 +59,19 @@ def get_address_list(request):
 # @line_auth_required
 def get_address_detail(request, address_id):
 
+    logger.info("----------------get_address_detail-------------------")
+
+    # Todo
     # user_id = request.user_id
-    user_id = "01JCQFAYQW3W54S7P3PPM4M7DG"
+    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
 
     if address_id is None:
         message = {
-            "message": "address_id is None",
+            'status': 'error',
+            "message": "address_id はなし",
             "errors": [{
                 "code": 404,
-                "message": "address_id is None"
+                "message": "address_id はなし"
             }],
             "data": {}
         }
@@ -86,6 +97,7 @@ def get_address_detail(request, address_id):
         }
 
     response = {
+        'status': 'success',
         "message": "住所詳細情報が正常に取得されました。",
         "errors": [],
         "data": {
@@ -99,16 +111,19 @@ def get_address_detail(request, address_id):
 # @line_auth_required
 def set_default_address(request, address_id):
 
+    logger.info("----------------set_default_address-------------------")
+
+    # Todo
     # user_id = request.user_id
-    user_id = "01JCQFAYQW3W54S7P3PPM4M7DG"
+    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
 
     if address_id is None:
         message = {
             'status': 'error',
-            "message": "address_id is None",
+            "message": "address_idはなし",
             "errors": [{
                 "code": 404,
-                "message": "address_id is None"
+                "message": "address_idはなし"
             }],
             "data": {}
         }
@@ -119,10 +134,10 @@ def set_default_address(request, address_id):
     if address_info is None:
         message = {
             'status': 'error',
-            "message": "address is not exist",
+            "message": "住所が存在しません",
             "errors": [{
                 "code": 404,
-                "message": "address is not exist"
+                "message": "住所が存在しません"
             }],
             "data": {}
         }
@@ -145,8 +160,11 @@ def set_default_address(request, address_id):
 # @line_auth_required
 def get_default_address(request):
 
+    logger.info("----------------get_default_address-------------------")
+
+    # Todo
     # user_id = request.user_id
-    user_id = "01JCQFAYQW3W54S7P3PPM4M7DG"
+    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
 
     result = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
 
@@ -168,6 +186,7 @@ def get_default_address(request):
         }
 
     response = {
+        "status": "success",
         "message": "デフォルト住所情報が正常に取得されました。",
         "errors": [],
         "data": {
@@ -180,13 +199,17 @@ def get_default_address(request):
 # @line_auth_required
 def update_address(request, address_id):
 
+    logger.info("----------------update_address-------------------")
+
+    # Todo
     # user_id = request.user_id
-    user_id = "01JCQFAYQW3W54S7P3PPM4M7DG"
+    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
 
     try:
         user_address = UserAddress.objects.get(address_id=address_id)
     except UserAddress.DoesNotExist:
         return Response({
+            "error"
             "message": "住所が見つかりませんでした。",
             "errors": [],
             "data": {}
@@ -197,12 +220,14 @@ def update_address(request, address_id):
     if serializer.is_valid():
         serializer.save()
         return Response({
+            "status": "success",
             "message": "住所が正常に更新されました。",
             "errors": [],
             "data": serializer.data
         }, status=status.HTTP_200_OK)
 
     return Response({
+        "status": "error",
         "message": "住所更新失敗",
         "errors": serializer.errors,
         "data": {}
@@ -211,22 +236,29 @@ def update_address(request, address_id):
 @api_view(['POST'])
 # @line_auth_required
 def create_address(request):
+
+    logger.info("----------------create_address-------------------")
+
+    # Todo
     # user_id = request.user_id
-    user_id = '01JCQFAYQW3W54S7P3PPM4M7DG'
-    print(request.data)
-    print(user_id)
+    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
+
+    logger.info("request body data: {}".format(request.data))
+    logger.info("user_id: {}".format(user_id))
 
     serializer = UserAddressSerializer(data=request.data, context={'user_id': user_id})
 
     if serializer.is_valid():
         serializer.save()
         return Response({
+            "status": "success",
             "message": "住所が正常に作成されました。",
             "errors": [],
             "data": serializer.data
         }, status=status.HTTP_201_CREATED)
 
     return Response({
+        "status": "error",
         "message": "住所作成失敗",
         "errors": serializer.errors,
         "data": {}
@@ -237,15 +269,21 @@ def create_address(request):
 # @line_auth_required
 def delete_address(request, address_id):
 
+    logger.info("----------------delete_address-------------------")
+
+    # Todo
     # user_id = request.user_id
-    user_id = "01JCQFAYQW3W54S7P3PPM4M7DG"
+    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
+
+    logger.info("user_id: {}".format(user_id))
 
     if address_id is None:
         message = {
-            "message": "address_id is None",
+            "status": "error",
+            "message": "address_id はなし",
             "errors": [{
                 "code": 404,
-                "message": "address_id is None"
+                "message": "address_id はなし"
             }],
             "data": {}
         }
@@ -255,10 +293,11 @@ def delete_address(request, address_id):
 
     if address_info is None:
         message = {
-            "message": "address is not exist",
+            "status": "error",
+            "message": "住所が存在しません",
             "errors": [{
                 "code": 404,
-                "message": "address is not exist"
+                "message": "住所が存在しません"
             }],
             "data": {}
         }
@@ -267,6 +306,7 @@ def delete_address(request, address_id):
     UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).update(deleted_flag=True)
 
     response = {
+        "status": "success",
         "message": "住所が正常に削除されました。",
         "errors": [],
         "data": {}
