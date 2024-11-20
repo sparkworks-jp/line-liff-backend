@@ -17,7 +17,6 @@ class Migration(migrations.Migration):
                 ('order_id', models.CharField(db_comment='注文番号', max_length=50, primary_key=True, serialize=False)),
                 ('user_id', models.CharField(db_comment='ユーザーID', max_length=50)),
                 ('order_date', models.DateTimeField(db_comment='注文作成日')),
-                ('express_information', models.TextField(db_comment='配送先情報:{phone,address,name,,,,,,とか}')),
                 ('carriage', models.IntegerField(blank=True, db_comment='配送料', null=True)),
                 ('total_price', models.IntegerField(blank=True, db_comment='総金額', null=True)),
                 ('coupon_count', models.IntegerField(blank=True, db_comment='クーポン金額:=総商品のprice', null=True)),

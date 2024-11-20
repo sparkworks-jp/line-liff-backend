@@ -1,4 +1,5 @@
 from rest_framework import serializers
+import ulid
 from .models import Order, OrderItem
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -11,7 +12,7 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = [
-            'order_id', 'product_id', 'product_name', 'product_price',
+            'item_id', 'order_id', 'product_id', 'product_name', 'product_price',
             'account', 'subtotal', 'created_by'
         ]
 
@@ -47,7 +48,6 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True, source='orderitem_set')
-    express_information = serializers.JSONField()
     status_display = serializers.SerializerMethodField()
 
     class Meta:

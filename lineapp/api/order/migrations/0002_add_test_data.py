@@ -13,11 +13,11 @@ class Migration(migrations.Migration):
             # 插入订单数据
             """
             INSERT INTO orders (
-                order_id, user_id, order_date, express_information, carriage, 
+                order_id, user_id, order_date,  carriage, 
                 total_price, coupon_count, payment, status, tracking_number, 
                 shipment_date, payment_date, payment_id, created_at, updated_at
             ) VALUES
-            ('ORD12345678', 'USER001', '2023-05-01', 'Tokyo, Shinjuku, 1-1-1', 1870,
+            ('ORD12345678', 'USER001', '2023-05-01',  1870,
              2970, 100, 2870, 1, 'TRK98765432', '2023-05-02', '2023-05-01', 
              'PAY12345', NOW(), NOW())
             """,
