@@ -154,6 +154,7 @@ class LineAuthMiddleware(MiddlewareMixin):
                         gender='',
                         role=1,
                         phone_number='',
+                        deleted_flag=False,
                         created_by=line_user_id,
                         updated_by=line_user_id
                     )
