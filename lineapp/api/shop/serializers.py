@@ -14,5 +14,6 @@ class ProductSerializer(serializers.ModelSerializer):
         if obj.image:
             if str(obj.image).startswith('https://'):
                 return str(obj.image)
-            return f"https://line-liff-app.s3.ap-northeast-1.amazonaws.com/public/{str(obj.image).lstrip('/')}"
+            return f"{str(obj.image).lstrip('/')}"
+
         return None
