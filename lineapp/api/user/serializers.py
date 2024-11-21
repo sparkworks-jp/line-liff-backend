@@ -25,30 +25,22 @@ class UserAddressSerializer(serializers.ModelSerializer):
             'district_address', 'detail_address', 'postal_code',
             'is_default', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['address_id', 'created_at', 'updated_at']
+        read_only_fields = ['address_id', 'user_id', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         # アドレスID生成
         validated_data['address_id'] = str(ulid.new())
-        
-        # デフォルト住所の処理
-        if validated_data.get('is_default'):
-            # 既存のデフォルト住所をfalseに設定
-            UserAddress.objects.filter(
-                user_id=validated_data['user_id'],
-                is_default=True
-            ).update(is_default=False)
+        validated_data['is_default'] = False
+        validated_data['deleted_flag'] = False
+        validated_data['user_id'] = self.context['user_id']
+        validated_data['created_by'] = self.context['user_id']
+        validated_data['updated_by'] = self.context['user_id']
             
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        # デフォルト住所の処理
-        if validated_data.get('is_default'):
-            # 既存のデフォルト住所をfalseに設定
-            UserAddress.objects.filter(
-                user_id=instance.user_id,
-                is_default=True
-            ).exclude(address_id=instance.address_id).update(is_default=False)
+
+        instance.is_default = validated_data.get('is_default', instance.is_default)
             
         return super().update(instance, validated_data)
 
