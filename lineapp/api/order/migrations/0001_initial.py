@@ -47,8 +47,6 @@ class Migration(migrations.Migration):
                 ('product_price', models.IntegerField(db_comment='商品価格')),
                 ('product_size_information', models.IntegerField(blank=True, db_comment='商品サイズ情報:（json数组-重量，体积，规格等）_具体待定', null=True)),
                 ('product_store_barcode', models.CharField(blank=True, db_comment='倉庫バーコード', max_length=100, null=True)),
-                ('discount_rate', models.DecimalField(blank=True, db_comment='割引率', decimal_places=2, max_digits=10, null=True)),
-                ('discount_amount', models.IntegerField(blank=True, db_comment='割引金額', null=True)),
                 ('account', models.IntegerField(db_comment='購入数量')),
                 ('subtotal', models.IntegerField(db_comment='小計金額')),
                 ('remark', models.TextField(blank=True, db_comment='顧客の商品の備考', null=True)),
@@ -63,4 +61,29 @@ class Migration(migrations.Migration):
                 'db_table_comment': '注文アイテム',
             },
         ),
+        migrations.CreateModel(
+            name='Coupon',
+            fields=[
+                ('coupon_id', models.CharField(primary_key=True, max_length=256)),
+                ('coupon_code', models.CharField(unique=True, max_length=20)),
+                ('coupon_name', models.CharField(max_length=256)),
+                ('discount_type', models.SmallIntegerField()),
+                ('discount_value', models.DecimalField(max_digits=10, decimal_places=2)),
+                ('start_date', models.DateTimeField()),
+                ('end_date', models.DateTimeField()),
+                ('min_order_amount', models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)),
+                ('max_discount_amount', models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)),
+                ('usage_count', models.IntegerField(default=0, null=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True, null=True)),
+                ('updated_at', models.DateTimeField(auto_now=True, null=True)),
+                ('created_by', models.CharField(max_length=256, null=True, blank=True)),
+                ('deleted_flag', models.BooleanField(default=False, null=True)),
+                ('product_id', models.CharField(max_length=256, null=True, blank=True)),
+            ],
+            options={
+                'db_table': 'coupons',
+                'db_table_comment': 'クーポン管理テーブル',
+            },
+        )
+        
     ]

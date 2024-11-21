@@ -8,8 +8,6 @@ class OrderItem(models.Model):
     product_price = models.IntegerField(db_comment='商品価格')
     product_size_information = models.TextField(null=True, blank=True, db_comment='商品サイズ情報:（json数组-重量，体积，规格等）_具体待定')
     product_store_barcode = models.CharField(max_length=100, null=True, blank=True, db_comment='倉庫バーコード')
-    discount_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, db_comment='割引率')
-    discount_amount = models.IntegerField(null=True, blank=True, db_comment='割引金額')
     account = models.IntegerField(db_comment='購入数量')
     subtotal = models.IntegerField(db_comment='小計金額')
     remark = models.TextField(null=True, blank=True, db_comment='顧客の商品の備考')
@@ -22,6 +20,46 @@ class OrderItem(models.Model):
     class Meta:
         db_table = 'order_items'
         db_table_comment = '注文アイテム'
+
+
+class Coupon(models.Model):
+    coupon_id = models.CharField(primary_key=True, max_length=256)
+    coupon_code = models.CharField(unique=True, max_length=20)
+    coupon_name = models.CharField(max_length=256)
+    discount_type = models.SmallIntegerField(
+        choices=[
+            (1, '定額割引'),
+            (2, 'パーセント割引')
+        ]
+    )
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    min_order_amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True
+    )
+    max_discount_amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True
+    )
+    usage_count = models.IntegerField(default=0, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+    created_by = models.CharField(max_length=256, null=True, blank=True)
+    deleted_flag = models.BooleanField(default=False, null=True)
+    product_id = models.CharField(max_length=256, null=True, blank=True)
+
+    class Meta:
+        db_table = 'coupons'
+        db_table_comment = 'クーポン管理テーブル'
+
+    def __str__(self):
+        return f"{self.coupon_code} - {self.coupon_name}"
 
 
 class Order(models.Model):

@@ -26,13 +26,12 @@ class Migration(migrations.Migration):
             """
             INSERT INTO order_items (
                 order_id, product_id, product_name, product_price, 
-                product_size_information, product_store_barcode, discount_rate, 
-                discount_amount, account, subtotal, remark, created_at, updated_at
+                product_size_information, product_store_barcode,  account, subtotal, remark, created_at, updated_at
             ) VALUES
             ('ORD12345678', 'PROD001', 'らせん酥（螺旋酥）', 340, NULL,
-             'BAR123456', 0.1, 34, 2, 680, 'Delicious snack', NOW(), NOW()),
+             'BAR123456', 2, 680, 'Delicious snack', NOW(), NOW()),
             ('ORD12345678', 'PROD003', 'たんこう酥（蛋黄酥）', 500, NULL,
-             'BAR654321', 0.05, 25, 3, 1500, 'Great for sharing', NOW(), NOW())
+             'BAR654321', 3, 1500, 'Great for sharing', NOW(), NOW())
             """
         ],
         reverse_sql=[

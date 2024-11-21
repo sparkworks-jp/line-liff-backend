@@ -26,7 +26,7 @@ class UserAddress(models.Model):
         db_table_comment = '住所'
 
 class User(models.Model):
-    id = models.CharField(max_length=256, primary_key=True, db_comment='ユーザーID')
+    user_id = models.CharField(max_length=256, primary_key=True, db_comment='ユーザーID')
     line_user_id = models.CharField(max_length=256, unique=True, null=True, blank=True, db_comment='lineユーザー番号')
     mail = models.CharField(max_length=256, db_comment='メールアドレス')
     user_name = models.CharField(max_length=256, db_comment='ユーザー名')

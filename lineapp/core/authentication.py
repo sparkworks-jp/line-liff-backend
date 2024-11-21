@@ -4,7 +4,8 @@ from django.http import HttpRequest
 import logging
 
 logger = logging.getLogger(__name__)
-#  DRF認証クラス　DRF只做最基本的状态确认
+# DRF認証クラス　DRF只做最基本的状态确认
+# 如果已经使用 DRF 的通用功能，例如 @api_view、视图集 (ViewSet)、权限类 (Permission Classes)，CustomAuthentication 是必须的。
 class CustomAuthentication(BaseAuthentication):
     def authenticate(self, request: HttpRequest):
         auth_header = request.headers.get('Authorization')

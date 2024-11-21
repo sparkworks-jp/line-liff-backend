@@ -135,7 +135,7 @@ class LineAuthMiddleware(MiddlewareMixin):
                         line_user_id=line_user_id,
                         deleted_flag=False
                     )
-                    logger.info(f"既存ユーザーを検出: user_id={user.id}")
+                    logger.info(f"既存ユーザーを検出: user_id={user.user_id}")
                     return user
                 except User.DoesNotExist:
                     # ユーザーが存在しない場合、新規作成
@@ -203,7 +203,7 @@ class LineAuthMiddleware(MiddlewareMixin):
             request.line_user = line_user_info
             request.line_user_id = line_user_info.get('sub')
             
-            logger.info(f"認証成功: user_id={user.id}, line_user_id={request.line_user_id}")
+            logger.info(f"認証成功: user_id={user.user_id}, line_user_id={request.line_user_id}")
             
         except Exception as e:
             logger.error(f"認証失敗: {str(e)}", exc_info=True)
