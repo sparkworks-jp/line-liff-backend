@@ -21,4 +21,6 @@ urlpatterns = [
     path('api/order/', include('api.order.urls')),
     path('api/user/', include('api.user.urls')),
     path('api/chat/', include('api.chat.urls')),
+    path('api/payment/', include('api.payment.urls')),
+    path('api/webhook/', include('api.webhook.urls')),
 ]
