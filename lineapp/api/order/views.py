@@ -147,12 +147,17 @@ def get_order_detail(request, order_id):
             'message': '注文が見つかりません'
         }, status=404)
 
-# @line_auth_required
+@line_auth_required
 @api_view(['GET'])
 def get_order_list(request):
     try:
+        user_id = request.line_user_id
+  
+        if not user_id:
+            return Response({'error': 'User ID is required'}, status=400)
+        
         logger.info("Accessing get_order_list view")
-        orders = Order.objects.filter(deleted_flag=False).order_by('-created_at')
+        orders = Order.objects.filter(user_id=user_id,deleted_flag=False).order_by('-created_at')
         order_list = []
 
         for order in orders:

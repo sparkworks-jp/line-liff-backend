@@ -141,10 +141,14 @@ LOGGING = {
         },
     },
     'loggers': {
-        'core.middleware.line_auth': {  
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': True,
+        '': { 
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'order': {  
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
 }
