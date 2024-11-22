@@ -16,7 +16,7 @@ from core.middleware.line_auth import line_auth_required
 
 logger = logging.getLogger(__name__)
 
-PAYPAY_API_KEY = os.environ["PAYPAY_API_KEY"]
+PAYPAY_API_KEY = os.getenv["PAYPAY_API_KEY"]
 PAYPAY_API_SECRET = os.getenv("PAYPAY_API_SECRET")
 PAYPAY_CLIENT_ID = os.getenv("PAYPAY_CLIENT_ID")
 PAYPAY_MERCHANT_ID = os.getenv("PAYPAY_MERCHANT_ID")
