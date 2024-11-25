@@ -86,7 +86,7 @@ class Order(models.Model):
     name = models.CharField(max_length=256, null=True, blank=True, db_comment='氏名')
     phone_number = models.CharField(max_length=50, null=True, blank=True, db_comment='電話番号')
     postal_code = models.CharField(max_length=50, null=True, blank=True, db_comment='郵便番号')
-
+    estimated_delivery_date = models.DateField(null=True, blank=True,db_comment='予想配達日')
 
     class Meta:
         db_table = 'orders'
