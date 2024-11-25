@@ -23,6 +23,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         model = Order
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
+    payment_qr_code_id = serializers.CharField(allow_null=True, required=False)
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
