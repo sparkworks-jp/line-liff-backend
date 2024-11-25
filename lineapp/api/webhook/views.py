@@ -10,12 +10,10 @@ from common.ip_check import ip_whitelist_required
 
 logger = logging.getLogger(__name__)
 
-# 支付状态回调，官方文档中没有看到回调有签名验证机制，因此采用IP白名单验证
-# 白名单参考url:https://integration.paypay.ne.jp/hc/en-us/articles/4414062832143-Please-provide-the-IP-address-of-Webhook-notification-source-server
-# 开发环境与生产环境IP白名单不同
-# https://pxgboy2hi7zpzhyitpghh6iy4u0iyyno.lambda-url.ap-northeast-1.on.aws/payment/callback
-# https://rested-conversely-seahorse.ngrok-free.app/api/webhook/payment/status
-
+# 支払いステータスのコールバックについて、公式ドキュメントには署名検証機能が記載されていません。公式では、PayPayのIPアドレスをホワイトリストに登録することを推奨しています。そのため、IPホワイトリストによる検証を採用します。
+# ✳開発環境と本番環境ではIPホワイトリストが異なります。
+# IPアドレスをホワイトリストに登録する理由：https://www.paypay.ne.jp/opa/doc/v1.0/dynamicqrcode#tag/Webhook-Setup
+# ホワイトリストの参考URL：https://integration.paypay.ne.jp/hc/en-us/articles/4414062832143-Please-provide-the-IP-address-of-Webhook-notification-source-server
 @api_view(['POST'])
 @ip_whitelist_required
 def payment_status_webhook(request):
@@ -44,10 +42,51 @@ def payment_status_webhook(request):
 
     order_info = Order.objects.filter(payment_id=merchant_order_id).first()
 
-    if state == 'COMPLETED' and order_info.payment == order_amount:
+    if state == 'COMPLETED' and str(order_info.payment) == order_amount and order_info.status == OrderStatus.PENDING_PAYMENT:
 
         Order.objects.filter(payment_id=merchant_order_id).update(status=OrderStatus.COMPLETED, payment_date=paid_at)
 
+        response = {
+            "status": "success",
+            "message": "OK",
+            "errors": [],
+            "data": {}
+        }
+
+        return Response(response, status=status.HTTP_200_OK)
+
+    elif state == 'COMPLETED' and str(order_info.payment) != order_amount:
+
+        # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
+        logger.error(f"注文の支払い金額が間違っています! order_id:{order_info.order_id}, payment_id:{order_info.payment_id}")
+
+        response = {
+            "status": "success",
+            "message": "OK",
+            "errors": [],
+            "data": {}
+        }
+
+        return Response(response, status=status.HTTP_200_OK)
+
+    elif state == 'COMPLETED' and order_info.status != OrderStatus.PENDING_PAYMENT:
+
+        # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
+        logger.error(f"注文ステータスエラー! order_id:{order_info.order_id}, order_status:{order_info.status}, payment_id:{order_info.payment_id}")
+
+        response = {
+            "status": "success",
+            "message": "OK",
+            "errors": [],
+            "data": {}
+        }
+
+        return Response(response, status=status.HTTP_200_OK)
+
+    else:
+        # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
+        logger.error(f"注文支払いエラー! order_id:{order_info.order_id}, order_status:{order_info.status}, payment_id:{order_info.payment_id}")
+        logger.error(f"PayPay webhook parameter:{request.body}")
         response = {
             "status": "success",
             "message": "OK",
