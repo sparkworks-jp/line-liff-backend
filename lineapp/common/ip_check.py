@@ -1,7 +1,7 @@
 import os
 import logging
 from django.http import HttpResponseForbidden
-# 从环境变量中加载 PayPay IP 白名单 示例: "203.0.113.0,198.51.100.0"
+# 環境変数からPayPayのIPホワイトリストを読み込む 例: "203.0.113.0,198.51.100.0"
 PAYPAY_IP_WHITELIST = os.getenv("PAYPAY_IP_WHITELIST", "").split(",")
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,6 @@ def ip_whitelist_required(view_func):
 
 
 def get_client_ip(request):
-    """获取请求的 IP 地址"""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
