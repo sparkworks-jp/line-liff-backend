@@ -47,42 +47,13 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             'updated_by'
         ]
 
-
-class OrderItemDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = ['item_id', 'product_id', 'product_name', 'product_price', 'account', 'subtotal']
-    
-    def to_representation(self, instance):
-        return {
-            'id': instance.product_id,
-            'name': instance.product_name,
-            'quantity': instance.account,
-            'price': instance.product_price,
-            'image': instance.product_id
-        }
-
-
 class OrderDetailSerializer(serializers.ModelSerializer):
-    items = OrderItemDetailSerializer(many=True, read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True, source='orderitem_set')
+    status_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = '__all__'
-
-def to_representation(self, instance):
-        data = super().to_representation(instance)
-        return {
-            'orderId': instance.order_id,
-            'trackingNumber': instance.tracking_number,
-            'orderStatus': str(instance.status).zfill(2),
-            'items': data['items'],
-            'totalAmount': instance.total_price,
-            'discount': instance.discount_amount,
-            'finalAmount': instance.payment,
-            'deliveryFee': instance.carriage,
-            'orderDate': instance.order_date.strftime('%Y-%m-%d') if instance.order_date else None,
-            'estimatedDelivery': instance.estimated_delivery_date.strftime('%Y-%m-%d') if instance.estimated_delivery_date else None,
-            'postalCode': instance.postal_code,
-            'address': instance.address
-        }
+        fields = [
+            'order_id', 'status', 'total_price', 'payment', 
+            'order_date', 'created_at', 'updated_at'
+        ]

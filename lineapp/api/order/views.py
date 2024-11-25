@@ -6,6 +6,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.utils import timezone
 from .models import Order, OrderItem
+from api.shop.models import Product 
+
+
 from django.db import transaction
 from .serializers import (
     OrderCreateSerializer, 
@@ -25,12 +28,13 @@ logger = logging.getLogger(__name__)
 # @line_auth_required
 def create_order(request):
     logger.info("=== Starting order creation ===")
-    logger.info(f"User: {request.data.get('userName', 'Unknown')}")
-    logger.info(f"Raw request data: {request.data}")
-
+    # user_id = request.line_user_id
+    user_id ="Uf1e196438ad2e407c977f1ede4a39580"
+    if not user_id:
+        return Response({'error': 'User ID is required'}, status=400)
     try:
         # Validate required fields
-        required_fields = ['userId', 'total', 'cart', 'shippingFee']
+        required_fields = ['total', 'cart', 'shippingFee']
         for field in required_fields:
             if field not in request.data:
                 logger.error(f"Missing required field: {field}")
@@ -41,7 +45,7 @@ def create_order(request):
             
         order_data = {
             'order_id': str(ulid.new()),
-            'user_id': request.data.get('userId'),
+            'user_id': user_id,
             'order_date': timezone.now(),
             'name': request.data.get('name'),
             'phone_number': request.data.get('phone'),
@@ -53,7 +57,8 @@ def create_order(request):
             'deleted_flag': False,
             'tracking_number': '111',
             'created_by': request.data.get('userName'),
-            'payment': request.data.get('total') + request.data.get('shippingFee', 0)
+            'payment': request.data.get('total') + request.data.get('shippingFee', 0),
+            'payment_qr_code_id': request.data.get('payment_qr_code_id'),
         }
         
         logger.info(f"Processed order data: {order_data}")
@@ -135,24 +140,80 @@ def create_order(request):
 @api_view(['GET'])
 def get_order_detail(request, order_id):
     try:
-        order = Order.objects.get(order_id=order_id, deleted_flag=False)
-        serializer = OrderDetailSerializer(order)
+        # 1. 获取订单信息
+        order = Order.objects.get(
+            order_id=order_id,
+            deleted_flag=False
+        )
+        
+        # 2. 从订单项表获取所有数据
+        order_items = OrderItem.objects.filter(
+            order_id=order_id, 
+            deleted_flag=False
+        ).values(
+            'product_id', 
+            'product_name', 
+            'account', 
+            'product_price'
+        )
+        
+        # 打印查询结果，看看是否有数据
+        print(f"Order items query: {order_items.query}")  # 打印实际执行的SQL
+        print(f"Found items: {list(order_items)}")  # 打印查询结果
+        
+        # 3. 只获取商品图片
+        product_ids = [item['product_id'] for item in order_items]
+        products = {
+            p['product_id']: p['image'] 
+            for p in Product.objects.filter(
+                product_id__in=product_ids
+            ).values('product_id', 'image')
+        }
+        
+        # 4. 组合订单项数据 - 主要数据从order_items取，只有image从products取
+        items_data = []
+        for item in order_items:
+            items_data.append({
+                'id': item['product_id'],
+                'name': item['product_name'],
+                'quantity': item['account'],
+                'price': item['product_price'],
+                'image': products.get(item['product_id'])  
+            })
+            
+        # 5. 组装返回数据
+        data = {
+            'orderId': order.order_id,
+            'trackingNumber': order.tracking_number,
+            'orderStatus': str(order.status).zfill(2),
+            'items': items_data,  
+            'totalAmount': f'¥{order.total_price:,}' if order.total_price else '¥0',
+            'discount': f'¥{order.discount_amount:,}' if order.discount_amount else '¥0',
+            'finalAmount': f'¥{order.payment:,}' if order.payment else '¥0',
+            'deliveryFee': f'¥{order.carriage:,}' if order.carriage else '¥0',
+            'orderDate': order.order_date.strftime('%Y-%m-%d') if order.order_date else None,
+            'estimatedDelivery': order.estimated_delivery_date.strftime('%Y-%m-%d') if order.estimated_delivery_date else None,
+            'postalCode': order.postal_code,
+            'address': order.address,
+        }
+
         return Response({
             'status': 'success',
-            'data': serializer.data
+            'data': data
         })
+        
     except Order.DoesNotExist:
         return Response({
             'status': 'error',
             'message': '注文が見つかりません'
         }, status=404)
 
-@line_auth_required
+# @line_auth_required
 @api_view(['GET'])
 def get_order_list(request):
     try:
-        user_id = request.line_user_id
-  
+        # user_id = request.line_user_id
+        user_id = "Uf1e196438ad2e407c977f1ede4a39580"
         if not user_id:
             return Response({'error': 'User ID is required'}, status=400)
         
