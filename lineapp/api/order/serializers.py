@@ -80,10 +80,3 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         }
         return STATUS_CHOICES.get(obj.status, "不明")
     
-# class OrderDetailSerializer(serializers.ModelSerializer):
-#     items = serializers.SerializerMethodField()
-#     status_display = serializers.SerializerMethodField()
-
-#     class Meta:
-#         model = Order
-#         fields = '__all__'
