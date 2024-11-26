@@ -94,6 +94,7 @@ def create_order(request):
                         'product_name': item['name'],
                         'product_price': int(item.get('price', 0)),
                         'account': int(item.get('quantity', 0)),
+                        'deleted_flag': False,
                         'subtotal': int(item.get('price', 0)) * int(item.get('quantity', 0)),
                         'created_by': request.data.get('userName', 'system')
                     }
