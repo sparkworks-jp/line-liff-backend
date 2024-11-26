@@ -102,7 +102,7 @@ def create_payment(request, order_id):
             # 以前の支払いリンクを削除
             response = delete_paypay_qr_code(pending_payment_order_info.payment_qr_code_id)
 
-            if response['resultInfo']['code'] == 'SUCCESS':
+            if response['resultInfo']['code'] == 'SUCCESS' or response['resultInfo']['code'] == 'DYNAMIC_QR_NOT_FOUND':
                 # 新たな支払いリンクを作成
                 amount = int(pending_payment_order_info.payment)
                 response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
