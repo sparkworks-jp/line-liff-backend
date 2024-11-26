@@ -4,10 +4,10 @@ from .base import *
 DATABASES = {
      'default': {
         'ENGINE': 'django.db.backends.postgresql',  
-        'NAME': 'naruto',  
-        'USER': 'postgres',  
-        'PASSWORD': 'Tzk7jN1KhNsGP5Gy', 
-        'HOST': 'prod-db-instance.cvegir20ptgl.ap-northeast-1.rds.amazonaws.com',  
+        'NAME': os.environ['NARUTO_DB_NAME'],
+        'USER': os.environ['NARUTO_DB_USER'],
+        'PASSWORD': os.environ['NARUTO_DB_PASSWORD'],
+        'HOST': os.environ['NARUTO_DB_HOST'],
         'PORT': '5432',  
         'OPTIONS': {
             'options': '-c search_path=line'

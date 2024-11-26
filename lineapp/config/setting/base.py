@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -63,7 +63,7 @@ CORS_ALLOWED_ORIGINS = [
 ROOT_URLCONF = 'config.urls'
 
 # LINE LIFF 配置
-LINE_LIFF_ID ='2006421613-ZrV2NXK1'  
+LINE_LIFF_ID ='2006421613-ZrV2NXK1'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'core.authentication.CustomAuthentication',
@@ -104,10 +104,10 @@ WSGI_APPLICATION = 'config.setting.wsgi.application'
 DATABASES = {
      'default': {
         'ENGINE': 'django.db.backends.postgresql',  
-        'NAME': 'naruto',  
-        'USER': 'postgres',  
-        'PASSWORD': 'Tzk7jN1KhNsGP5Gy', 
-        'HOST': 'prod-db-instance.cvegir20ptgl.ap-northeast-1.rds.amazonaws.com',  
+        'NAME': os.environ['NARUTO_DB_NAME'],
+        'USER': os.environ['NARUTO_DB_USER'],
+        'PASSWORD': os.environ['NARUTO_DB_PASSWORD'],
+        'HOST': os.environ['NARUTO_DB_HOST'],
         'PORT': '5432',  
         'OPTIONS': {
             'options': '-c search_path=line,public'
