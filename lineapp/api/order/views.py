@@ -280,48 +280,69 @@ def update_order(request, order_id):
 # @line_auth_required
 @api_view(['PATCH'])
 def cancel_order(request, order_id):
+
     try:
 
+        # 注文情報を取得
         order = Order.objects.get(
             order_id=order_id,
             deleted_flag=False)
+            
+        # リクエストデータの検証
         serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
         if not serializer.is_valid():
+            logger.warning(f"リクエストデータが無効です: {serializer.errors}")
+
             return Response({
                 'status': 'error',
                 'message': '無効なデータです',
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            if order.payment_qr_code_id:
+        # PayPay QRコードの処理
+        if order.payment_qr_code_id:
+            try:
+                # QRコードの削除をPayPayに要求
                 response = delete_paypay_qr_code(order.payment_qr_code_id)
-                print("PayPay response:", response)  
-
-                if response.get('resultInfo', {}).get('code') != 'SUCCESS':
+                
+                # QRコードが存在しない場合も正常として扱う
+                if response.get('resultInfo', {}).get('code') not in ['SUCCESS', 'DYNAMIC_QR_NOT_FOUND']:
                     logger.error(f"PayPay QRコード削除失敗: {response}")
-                    raise Exception(f"PayPay QRコード削除失敗: {response.get('resultInfo', {}).get('message')}")
+                    return Response({
+                        'status': 'error',
+                        'message': 'QRコードの削除中にエラーが発生しました',
+                        'error': response.get('resultInfo', {}).get('message')
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                                        
+            except Exception as e:
+                if 'DYNAMIC_QR_NOT_FOUND' not in str(e):
+                    logger.error(f"QRコード削除中にエラーが発生しました。order_id={order_id}, error={str(e)}")
+                    return Response({
+                        'status': 'error',
+                        'message': 'QRコードの削除中にエラーが発生しました',
+                        'error': str(e)
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                else:
+                    logger.warning(f"QRコードが既に存在しません: order_id={order_id}")
 
-                if response.get('status_code') not in [200, 204]:
-                    logger.error(f"PayPay API エラー: {response}")
-                    raise Exception('PayPay APIエラー')
+            # 注文状態をキャンセル(6)に更新
+            serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
+            if not serializer.is_valid():
+                logger.error(f"更新データが無効です: {serializer.errors}")
+                return Response({
+                    'status': 'error',
+                    'message': '更新データが無効です',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
 
-        except Exception as e:
-            logger.error(f"QRコード削除中にエラーが発生しました。order_id={order_id}, error={str(e)}")
+            serializer.save()
+            logger.info(f"注文がキャンセルされました。order_id={order_id}")
+            
             return Response({
-                'status': 'error',
-                'message': 'QRコードの削除中にエラーが発生しました',  
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)     
-
-        serializer.save()
-        logger.info(f"注文がキャンセルされました。order_id={order_id}")
-
-        return Response({
-            'status': 'success',
-            'message': '注文がキャンセルされました',
-            'data':serializer.data
-        })
+                'status': 'success',
+                'message': '注文がキャンセルされました',
+                'data': serializer.data
+            })
 
     except Order.DoesNotExist:
         logger.warning(f"注文が見つかりません。order_id={order_id}")
@@ -329,7 +350,7 @@ def cancel_order(request, order_id):
             'status': 'error',
             'message': '注文が見つかりません'
         }, status=status.HTTP_404_NOT_FOUND)
-    
+        
     except Exception as e:
         logger.error(f"注文キャンセル中に予期せぬエラーが発生しました。order_id={order_id}, error={str(e)}")
         return Response({
@@ -337,6 +358,7 @@ def cancel_order(request, order_id):
             'message': 'システムエラーが発生しました',
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 
 
 # @line_auth_required
