@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from .models import Order, OrderItem
 from api.shop.models import Product 
+from api.payment.views import delete_paypay_qr_code
 
 
 from django.db import transaction
@@ -256,9 +257,8 @@ def get_order_list(request):
 @api_view(['PATCH'])
 def update_order(request, order_id):
     try:
-        order = Order.objects.get(order_id=order_id)
+        order = Order.objects.get(order_id=order_id, deleted_flag=False)
         serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
-        
         if serializer.is_valid():
             serializer.save()
             return Response({
@@ -276,6 +276,68 @@ def update_order(request, order_id):
             'status': 'error',
             'message': '注文が見つかりません'
         }, status=404)
+
+# @line_auth_required
+@api_view(['PATCH'])
+def cancel_order(request, order_id):
+    try:
+
+        order = Order.objects.get(
+            order_id=order_id,
+            deleted_flag=False)
+        serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({
+                'status': 'error',
+                'message': '無効なデータです',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            if order.payment_qr_code_id:
+                response = delete_paypay_qr_code(order.payment_qr_code_id)
+                print("PayPay response:", response)  
+
+                if response.get('resultInfo', {}).get('code') != 'SUCCESS':
+                    logger.error(f"PayPay QRコード削除失敗: {response}")
+                    raise Exception(f"PayPay QRコード削除失敗: {response.get('resultInfo', {}).get('message')}")
+
+                if response.get('status_code') not in [200, 204]:
+                    logger.error(f"PayPay API エラー: {response}")
+                    raise Exception('PayPay APIエラー')
+
+        except Exception as e:
+            logger.error(f"QRコード削除中にエラーが発生しました。order_id={order_id}, error={str(e)}")
+            return Response({
+                'status': 'error',
+                'message': 'QRコードの削除中にエラーが発生しました',  
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)     
+
+        serializer.save()
+        logger.info(f"注文がキャンセルされました。order_id={order_id}")
+
+        return Response({
+            'status': 'success',
+            'message': '注文がキャンセルされました',
+            'data':serializer.data
+        })
+
+    except Order.DoesNotExist:
+        logger.warning(f"注文が見つかりません。order_id={order_id}")
+        return Response({
+            'status': 'error',
+            'message': '注文が見つかりません'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    except Exception as e:
+        logger.error(f"注文キャンセル中に予期せぬエラーが発生しました。order_id={order_id}, error={str(e)}")
+        return Response({
+            'status': 'error',
+            'message': 'システムエラーが発生しました',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # @line_auth_required
 @api_view(['DELETE'])

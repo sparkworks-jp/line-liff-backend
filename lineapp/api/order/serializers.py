@@ -48,12 +48,42 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
         ]
 
 class OrderDetailSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True, source='orderitem_set')
+    items = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
-            'order_id', 'status', 'total_price', 'payment', 
-            'order_date', 'created_at', 'updated_at'
+            'order_id', 
+            'status',
+            'status_display',  
+            'total_price', 
+            'payment', 
+            'order_date', 
+            'created_at', 
+            'updated_at',
+            'items'
         ]
+
+    def get_items(self, obj):
+        order_items = OrderItem.objects.filter(order_id=obj.order_id)
+        return OrderItemSerializer(order_items, many=True).data
+
+    def get_status_display(self, obj):
+        STATUS_CHOICES = {
+            1: "作成済み",
+            2: "支払い待ち",
+            3: "支払い済み",
+            4: "発送済み",
+            5: "完了",
+            6: "キャンセル"
+        }
+        return STATUS_CHOICES.get(obj.status, "不明")
+    
+# class OrderDetailSerializer(serializers.ModelSerializer):
+#     items = serializers.SerializerMethodField()
+#     status_display = serializers.SerializerMethodField()
+
+#     class Meta:
+#         model = Order
+#         fields = '__all__'
