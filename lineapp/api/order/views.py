@@ -325,25 +325,29 @@ def cancel_order(request, order_id):
                     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 else:
                     logger.warning(f"QRコードが既に存在しません: order_id={order_id}")
-
-            # 注文状態をキャンセル(6)に更新
-            serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
-            if not serializer.is_valid():
-                logger.error(f"更新データが無効です: {serializer.errors}")
-                return Response({
-                    'status': 'error',
-                    'message': '更新データが無効です',
-                    'errors': serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            serializer.save()
-            logger.info(f"注文がキャンセルされました。order_id={order_id}")
             
+        # user_id = request.user_id
+        update_data = request.data.copy() 
+        update_data['updated_by'] = request.user_id if hasattr(request, 'user_id') else None
+
+        # 注文状態をキャンセル(6)に更新
+        serializer = OrderUpdateSerializer(order, data=update_data, partial=True)
+        if not serializer.is_valid():
+            logger.error(f"更新データが無効です: {serializer.errors}")
             return Response({
-                'status': 'success',
-                'message': '注文がキャンセルされました',
-                'data': serializer.data
-            })
+                'status': 'error',
+                'message': '更新データが無効です',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        logger.info(f"注文がキャンセルされました。order_id={order_id}")
+        
+        return Response({
+            'status': 'success',
+            'message': '注文がキャンセルされました',
+            'data': serializer.data
+        })
 
     except Order.DoesNotExist:
         logger.warning(f"注文が見つかりません。order_id={order_id}")
