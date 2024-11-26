@@ -28,112 +28,118 @@ client.set_assume_merchant(PAYPAY_MERCHANT_ID)
 
 # 注文の詳細を確認 --> 注文状態を確認 (未支払い状態のみ支払いリンクを作成可能) --> 以前の支払いリンクを無効化 --> PayPayに支払いリンクをリクエスト --> 支払いリンクIDを注文に更新 --> 支払いリンクを返す
 
-@api_view(['POST'])
-# @line_auth_required
-def create_payment(request, order_id):
+# @api_view(['POST'])
+# # @line_auth_required
+# def create_payment(request, order_id):
 
-    logger.info("----------------create_payment-------------------")
+#     logger.info("----------------create_payment-------------------")
 
-    # Todo
-    # user_id = request.user.user_id
-    user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
+#     # Todo
+#     # user_id = request.user.user_id
+#     # user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
+#     user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
-    # 未支払い状態の注文を取得
-    pending_payment_order_info = Order.objects.filter(user_id=user_id, order_id=order_id, deleted_flag=False, status=OrderStatus.PENDING_PAYMENT).first()
+#     # 未支払い状態の注文を取得
+#     pending_payment_order_info = Order.objects.filter(
+#         user_id=user_id,
+#         order_id=order_id,
+#         deleted_flag=False,
+#         status__in=[OrderStatus.CREATED, OrderStatus.PENDING_PAYMENT]  
+#     ).first()
+#     # 未支払い状態の注文が存在しない場合
+#     if pending_payment_order_info is None:
+#         message = {
+#             'status': 'error',
+#             "message": "未支払いの注文が存在しません。",
+#             "errors": [{
+#                 "code": 400,
+#                 "message": "未支払いの注文が存在しません。"
+#             }],
+#             "data": {}
+#         }
+#         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-    # 未支払い状態の注文が存在しない場合
-    if pending_payment_order_info is None:
-        message = {
-            'status': 'error',
-            "message": "未支払いの注文が存在しません。",
-            "errors": [{
-                "code": 400,
-                "message": "未支払いの注文が存在しません。"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+#     # 注文が24時間を超えていないか確認
+#     jst_now = datetime.now(ZoneInfo(TIMEZONE))
+#     if jst_now - pending_payment_order_info.created_at > timedelta(PAYMENT_TIMEOUT_HOURS):
+#         message = {
+#             'status': 'error',
+#             "message": "注文がタイムアウトしました。支払いはできません。",
+#             "errors": [{
+#                 "code": 400,
+#                 "message": "注文がタイムアウトしました。支払いはできません。"
+#             }],
+#             "data": {}
+#         }
+#         return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
-    # 注文が24時間を超えていないか確認
-    jst_now = datetime.now(ZoneInfo(TIMEZONE))
-    if jst_now - pending_payment_order_info.created_at > timedelta(PAYMENT_TIMEOUT_HOURS):
-        message = {
-            'status': 'error',
-            "message": "注文がタイムアウトしました。支払いはできません。",
-            "errors": [{
-                "code": 400,
-                "message": "注文がタイムアウトしました。支払いはできません。"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+#     logger.info(f"支払いリンクの作成を開始します。order_id={order_id}, user_id={user_id}")
 
-    logger.info(f"支払いリンクの作成を開始します。order_id={order_id}, user_id={user_id}")
+#     try:
 
-    try:
+#         # 以前に支払いリンクが作成されていない場合
+#         if pending_payment_order_info.payment_id is None:
+#             # 支払いリンクを作成
+#             amount = int(pending_payment_order_info.payment)
+#             response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
 
-        # 以前に支払いリンクが作成されていない場合
-        if pending_payment_order_info.payment_id is None:
-            # 支払いリンクを作成
-            amount = int(pending_payment_order_info.payment)
-            response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
+#             if response['resultInfo']['code'] == 'SUCCESS':
+#                 payment_link = response['data']['url']
+#                 payment_link_response = {
+#                     'status': 'success',
+#                     "message": "支払いリンクが正常に取得されました。",
+#                     "errors": [],
+#                     "data": {
+#                         "payment_link": payment_link
+#                     }
+#                 }
 
-            if response['resultInfo']['code'] == 'SUCCESS':
-                payment_link = response['data']['url']
-                payment_link_response = {
-                    'status': 'success',
-                    "message": "支払いリンクが正常に取得されました。",
-                    "errors": [],
-                    "data": {
-                        "payment_link": payment_link
-                    }
-                }
+#                 return Response(payment_link_response, status=status.HTTP_200_OK)
+#         else:
+#             # 以前の支払いリンクを削除
+#             response = delete_paypay_qr_code(pending_payment_order_info.payment_qr_code_id)
 
-                return Response(payment_link_response, status=status.HTTP_200_OK)
-        else:
-            # 以前の支払いリンクを削除
-            response = delete_paypay_qr_code(pending_payment_order_info.payment_qr_code_id)
+#             if response['resultInfo']['code'] == 'SUCCESS':
+#                 # 新たな支払いリンクを作成
+#                 amount = int(pending_payment_order_info.payment)
+#                 response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
 
-            if response['resultInfo']['code'] == 'SUCCESS':
-                # 新たな支払いリンクを作成
-                amount = int(pending_payment_order_info.payment)
-                response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
+#                 if response['resultInfo']['code'] == 'SUCCESS':
+#                     # 注文テーブルを更新
+#                     payment_qr_code_id = response['data']['codeId']
+#                     Order.objects.filter(order_id=order_id).update(payment_id=merchant_payment_id, payment_qr_code_id=payment_qr_code_id)
+#                     payment_link = response['data']['url']
+#                     payment_link_response = {
+#                         'status': 'success',
+#                         "message": "支払いリンクが正常に取得されました。",
+#                         "errors": [],
+#                         "data": {
+#                             "payment_link": payment_link
+#                         }
+#                     }
 
-                if response['resultInfo']['code'] == 'SUCCESS':
-                    # 注文テーブルを更新
-                    payment_qr_code_id = response['data']['codeId']
-                    Order.objects.filter(order_id=order_id).update(payment_id=merchant_payment_id, payment_qr_code_id=payment_qr_code_id)
-                    payment_link = response['data']['url']
-                    payment_link_response = {
-                        'status': 'success',
-                        "message": "支払いリンクが正常に取得されました。",
-                        "errors": [],
-                        "data": {
-                            "payment_link": payment_link
-                        }
-                    }
+#                     return Response(payment_link_response, status=status.HTTP_200_OK)
 
-                    return Response(payment_link_response, status=status.HTTP_200_OK)
+#     except Exception as e:
+#         logger.exception(f"支払いリンク作成中に例外が発生しました。order_id={order_id}, error={str(e)}")
 
-    except Exception as e:
-        logger.exception(f"支払いリンク作成中に例外が発生しました。order_id={order_id}, error={str(e)}")
-
-        response = {
-            'status': 'error',
-            "message": "システムエラーが発生しました。",
-            "errors": [{
-                "code": 500,
-                "message": "予期しないエラーが発生しました。"
-            }],
-            "data": {
-                "payment_link": payment_link
-            }
-        }
-        return Response(response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#         response = {
+#             'status': 'error',
+#             "message": "システムエラーが発生しました。",
+#             "errors": [{
+#                 "code": 500,
+#                 "message": "予期しないエラーが発生しました。"
+#             }],
+#             "data": {
+#                 "payment_link": payment_link
+#             }
+#         }
+#         return Response(response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 def create_paypay_qr_code(order_id, amount):
     try:
+
         merchant_payment_id = str(uuid.uuid4())
         request = {
             "merchantPaymentId": merchant_payment_id,
@@ -156,7 +162,103 @@ def create_paypay_qr_code(order_id, amount):
 def delete_paypay_qr_code(qr_code_id):
     try:
         response = client.Code.delete_qr_code(str(qr_code_id))
+        print("delete_paypay_qr_code",response)
         return response
     except Exception as e:
         logger.error(f"QRコード削除中に例外が発生しました。qr_code_id={qr_code_id}, error={str(e)}")
         raise
+
+@api_view(['POST'])
+def create_payment(request, order_id):
+    logger.info("----------------create_payment-------------------")
+    logger.info(f"Creating payment for order_id: {order_id}")
+
+    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+
+    # 未支払い状態の注文を取得
+    pending_payment_order_info = Order.objects.filter(
+        user_id=user_id,
+        order_id=order_id,
+        deleted_flag=False,
+        status__in=[OrderStatus.CREATED, OrderStatus.PENDING_PAYMENT]  
+    ).first()
+
+    if pending_payment_order_info is None:
+        logger.warning(f"Order not found or invalid status: {order_id}")
+        return Response({
+            'status': 'error',
+            "message": "未支払いの注文が存在しません。",
+            "errors": [{
+                "code": 400,
+                "message": "未支払いの注文が存在しません。"
+            }],
+            "data": {}
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # 更新订单状态为待支付
+        if pending_payment_order_info.status == OrderStatus.CREATED:
+            logger.info(f"Updating order status to PENDING_PAYMENT: {order_id}")
+            pending_payment_order_info.status = OrderStatus.PENDING_PAYMENT
+            pending_payment_order_info.save()
+
+        amount = int(pending_payment_order_info.payment)
+        logger.info(f"Creating PayPay QR code for amount: {amount}")
+
+        # 支払いリンクを作成
+        response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
+        logger.info(f"PayPay API response: {response}")
+            
+        if response['resultInfo']['code'] == 'SUCCESS':
+            # 更新订单的支付信息
+            payment_qr_code_id = response['data']['codeId']
+            payment_link = response['data']['url']
+            
+            logger.info(f"PayPay QR code created successfully: {payment_qr_code_id}")
+            
+            pending_payment_order_info.payment_id = merchant_payment_id
+            pending_payment_order_info.payment_qr_code_id = payment_qr_code_id
+            pending_payment_order_info.save()
+
+            return Response({
+                'status': 'success',
+                "message": "支払いリンクが正常に取得されました。",
+                "errors": [],
+                "data": {
+                    "payment_link": payment_link,
+                    "merchant_payment_id": merchant_payment_id,
+                    "code_id": payment_qr_code_id
+                }
+            }, status=status.HTTP_200_OK)
+        else:
+            error_code = response['resultInfo']['code']
+            error_message = response['resultInfo'].get('message', '不明なエラー')
+            logger.error(f"PayPay API error: {error_code} - {error_message}")
+            
+            # 对于认证错误，返回更具体的错误信息
+            if error_code == 'UNAUTHORIZED':
+                error_message = "PayPay APIの認証に失敗しました。API設定を確認してください。"
+                
+            return Response({
+                'status': 'error',
+                "message": "支払いリンクの作成に失敗しました。",
+                "errors": [{
+                    "code": error_code,
+                    "message": error_message
+                }],
+                "data": {
+                    "help_url": f"https://developer.paypay.ne.jp/develop/resolve?api_name=v2_createDynamicQRCode&code={error_code}"
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger.exception(f"支払いリンク作成中に予期せぬエラーが発生しました。order_id={order_id}")
+        return Response({
+            'status': 'error',
+            "message": "システムエラーが発生しました。",
+            "errors": [{
+                "code": 500,
+                "message": str(e)
+            }],
+            "data": {}
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
