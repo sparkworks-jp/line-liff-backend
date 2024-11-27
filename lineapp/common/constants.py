@@ -1,5 +1,6 @@
 from enum import IntEnum
 
+
 class OrderStatus(IntEnum):
     CREATED = 1
     PENDING_PAYMENT = 2
@@ -11,3 +12,9 @@ class OrderStatus(IntEnum):
     @classmethod
     def choices(cls):
         return [(status.value, status.name.capitalize()) for status in cls]
+
+
+class SaleStatus(IntEnum):
+    ON_SALE = 1  # 販売中
+    STOP_SALE = 2  # 販売停止
+
