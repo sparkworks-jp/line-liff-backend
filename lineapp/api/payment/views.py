@@ -147,7 +147,7 @@ def create_paypay_qr_code(order_id, amount):
         request = {
             "merchantPaymentId": merchant_payment_id,
             "codeType": "ORDER_QR",
-            "redirectUrl": f"{APP_HOST_NAME}/order?id={order_id}",
+            "redirectUrl": f"{APP_HOST_NAME}/paymentcomplete",
             "redirectType": "WEB_LINK",
             "orderDescription": "注文の説明",
             "amount": {

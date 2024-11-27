@@ -33,7 +33,8 @@ LOGGING = {
         'file': {
             'class': 'logging.FileHandler',
             'filename': 'django.log',
-            'formatter': 'levelname_message'
+            'formatter': 'levelname_message',
+            'encoding': 'utf-8'
         },
     },
     'loggers': {

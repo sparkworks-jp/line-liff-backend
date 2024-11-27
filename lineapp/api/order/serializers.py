@@ -11,10 +11,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = [
-            'item_id', 'order_id', 'product_id', 'product_name', 'product_price',
-            'account', 'subtotal', 'created_by'
-        ]
+        fields = '__all__'
+        extra_kwargs = {
+            'deleted_flag': {'default': False}
+        }
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     items = OrderItemCreateSerializer(many=True, required=False)
