@@ -42,9 +42,9 @@ def payment_status_webhook(request):
 
     order_info = Order.objects.filter(payment_id=merchant_order_id).first()
 
-    if state == 'COMPLETED' and str(order_info.payment) == order_amount and order_info.status == OrderStatus.PENDING_PAYMENT:
+    if state == 'COMPLETED' and str(order_info.payment) == order_amount and order_info.status in (OrderStatus.CREATED, OrderStatus.PENDING_PAYMENT):
 
-        Order.objects.filter(payment_id=merchant_order_id).update(status=OrderStatus.COMPLETED, payment_date=paid_at)
+        Order.objects.filter(payment_id=merchant_order_id).update(status=OrderStatus.PAID, payment_date=paid_at)
 
         response = {
             "status": "success",
@@ -69,7 +69,7 @@ def payment_status_webhook(request):
 
         return Response(response, status=status.HTTP_200_OK)
 
-    elif state == 'COMPLETED' and order_info.status != OrderStatus.PENDING_PAYMENT:
+    elif state == 'COMPLETED' and order_info.status not in (OrderStatus.CREATED, OrderStatus.PENDING_PAYMENT):
 
         # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
         logger.error(f"注文ステータスエラー! order_id:{order_info.order_id}, order_status:{order_info.status}, payment_id:{order_info.payment_id}")
