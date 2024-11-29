@@ -6,6 +6,7 @@ class ChatHistory(models.Model):
     answers = models.TextField(null=True, blank=True, db_comment='答え')
     token_utilization = models.IntegerField(db_comment='token消費量')
     thread_id = models.CharField(max_length=256, null=True, blank=True, db_comment='スレッドID')
+    assistant_id = models.CharField(max_length=256, null=True, blank=True, db_comment='assistant ID')
     created_by = models.CharField(max_length=256, null=True, blank=True, db_comment='作成者')
     updated_by = models.CharField(max_length=256, null=True, blank=True, db_comment='更新者')
     deleted_flag = models.BooleanField(null=True, blank=True, db_comment='削除フラグ')

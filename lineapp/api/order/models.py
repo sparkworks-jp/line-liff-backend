@@ -70,7 +70,7 @@ class Order(models.Model):
     total_price = models.IntegerField(null=True, blank=True, db_comment='総金額')
     coupon_count = models.IntegerField(null=True, blank=True, db_comment='クーポン金額:=総商品のprice')
     payment = models.IntegerField(null=True, blank=True, db_comment='支払金額: =総金額＋配送料-クーポン')
-    status = models.IntegerField(db_comment='注文ステータス:"01作成済み"、"02支払い待ち"、"03支払い済み"、"04発送済み"、"05完了"、"06キャンセル"')
+    status = models.IntegerField(db_comment='注文ステータス:"01支払い待ち"、"02支払い済み"、"03発送済み"、"04配送完了"、"05キャンセル"')
     tracking_number = models.CharField(null=True, blank=True,max_length=50, db_comment='追跡番号')
     shipment_date = models.DateTimeField(null=True, blank=True, db_comment='発送日')
     payment_date = models.DateTimeField(null=True, blank=True, db_comment='支払日')

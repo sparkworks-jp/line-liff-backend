@@ -120,7 +120,7 @@ Field="配送料","carriage","@INT",,,"","",$FFFFFFFF,""
 Field="総金額","total_price","@INT",,,"","",$FFFFFFFF,""
 Field="クーポン金額","coupon_count","@INT",,,"","=総商品のprice",$00000000,""
 Field="支払金額","payment","@INT",,,""," =総金額＋配送料-クーポン",$00000000,""
-Field="注文ステータス","status","@INT","NOT NULL",,"","\Q01作成済み\Q、\Q02支払い待ち\Q、\Q03支払い済み\Q、\Q04発送済み\Q、\Q05完了\Q、\Q06キャンセル\Q",$FFFFFFFF,""
+Field="注文ステータス","status","@INT","NOT NULL",,"","注文ステータス:\Q01支払い待ち\Q、\Q02支払い済み\Q、\Q03発送済み\Q、\Q04配送完了\Q、\Q05キャンセル\Q",$FFFFFFFF,""
 Field="追跡番号","tracking_number","character varying(50)","NOT NULL",,"","",$FFFFFFFF,""
 Field="発送日","shipment_date","timestamp(6) without time zone",,,"","",$FFFFFFFF,""
 Field="支払日","payment_date","timestamp(6) without time zone",,,"","",$FFFFFFFF,""
@@ -140,7 +140,7 @@ Field="削除フラグ","deleted_flag ","boolean",,,"","",$FFFFFFFF,""
 EffectMode=None
 Color=$000000
 BkColor=$FFFFFF
-ModifiedDateTime=20241121155402
+ModifiedDateTime=20241129104720
 Position="MAIN",1600,800,337,642
 ZOrder=34
 
@@ -311,6 +311,7 @@ Field="チャットID","chat_id","character varying(50)","NOT NULL",0,"","",$000
 Field="問題","questions","text",,,"","",$FFFFFFFF,""
 Field="答え","answers","text",,,"","",$FFFFFFFF,""
 Field="token消費量","token_utilization","integer","NOT NULL",,"","",$FFFFFFFF,""
+Field="アシスタントID","assistant_id","character varying(256)",,,"","",$FFFFFFFF,""
 Field="スレッドID","thread_id","character varying(256)",,,"","",$FFFFFFFF,""
 Field="作成者","created_by","character varying(256)",,,"","",$FFFFFFFF,""
 Field="更新者","updated_by","character varying(256)",,,"","",$FFFFFFFF,""
@@ -320,7 +321,7 @@ Field="作成日時","created_at","timestamp(6) without time zone",,,"CURRENT_TI
 EffectMode=None
 Color=$000000
 BkColor=$FFFFFF
-ModifiedDateTime=20241105165227
+ModifiedDateTime=20241129104642
 Position="MAIN",750,650,309,372
 ZOrder=46
 
@@ -347,7 +348,7 @@ TermPos2=R
 ZOrder=47
 
 [Comment]
-Comment=紫色：待修改字段\n\n设计细节：\ncoupon 分为订单级和商品级优惠券，注文最多使用一张优惠券
+Comment=紫色：待修改字段\n\n设计细节：\nline coupon 具体能拿到哪些信息还不清楚\n原则上coupon 分为订单级和商品级优惠券，注文最多使用一张优惠券
 FontName=Trebuchet MS
 FontBold=1
 FontItalic=0
@@ -357,10 +358,10 @@ FontColor=$800080
 LineColor=$000000
 BkColor=$FFFFFF
 Page=Main
-Left=3445
+Left=3400
 Top=341
 ZOrder=48
-Width=519
+Width=564
 Height=387
 
 [Entity]
@@ -391,7 +392,7 @@ Index=coupons_coupon_code_key=2,coupon_code
 EffectMode=None
 Color=$000000
 BkColor=$FFFFFF
-ModifiedDateTime=20241121162204
+ModifiedDateTime=20241121162343
 Position="Main",2800,1050,337,460
 ZOrder=54
 
