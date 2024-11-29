@@ -104,7 +104,6 @@ def create_order(request):
             }
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
-        print(f"OrderStatus.CREATED:{OrderStatus.CREATED}")
 
         order_data = {
             'order_id': str(ulid.new()),
@@ -119,7 +118,7 @@ def create_order(request):
             'total_price': product_total_price,
             'status': OrderStatus.CREATED.value,
             'deleted_flag': False,
-            'tracking_number': '111',
+            # 'tracking_number': '111',
             'created_by': user_id,
             'payment': total_price,
             # 'payment_qr_code_id': request.data.get('payment_qr_code_id'),
