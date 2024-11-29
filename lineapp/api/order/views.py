@@ -116,7 +116,7 @@ def create_order(request):
             'postal_code': default_address.postal_code,
             'carriage': shippingFee,
             'total_price': product_total_price,
-            'status': OrderStatus.CREATED.value,
+            'status': OrderStatus.PENDING_PAYMENT.value,
             'deleted_flag': False,
             # 'tracking_number': '111',
             'created_by': user_id,

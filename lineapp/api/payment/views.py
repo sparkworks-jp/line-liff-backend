@@ -44,7 +44,7 @@ def create_payment(request, order_id):
         user_id=user_id,
         order_id=order_id,
         deleted_flag=False,
-        status__in=[OrderStatus.CREATED, OrderStatus.PENDING_PAYMENT]  
+        status=OrderStatus.PENDING_PAYMENT
     ).first()
     # 未支払い状態の注文が存在しない場合
     if pending_payment_order_info is None:
@@ -133,9 +133,7 @@ def create_payment(request, order_id):
                 "code": 500,
                 "message": "予期しないエラーが発生しました。"
             }],
-            "data": {
-                "payment_link": payment_link
-            }
+            "data": {}
         }
         return Response(response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

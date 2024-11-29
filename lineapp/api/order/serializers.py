@@ -71,12 +71,11 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
     def get_status_display(self, obj):
         STATUS_CHOICES = {
-            1: "作成済み",
-            2: "支払い待ち",
-            3: "支払い済み",
-            4: "発送済み",
-            5: "完了",
-            6: "キャンセル"
+            1: "支払い待ち",
+            2: "支払い済み",
+            3: "発送済み",
+            4: "完了",
+            5: "キャンセル"
         }
         return STATUS_CHOICES.get(obj.status, "不明")
     

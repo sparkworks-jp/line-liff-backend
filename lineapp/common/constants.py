@@ -2,12 +2,11 @@ from enum import IntEnum
 
 
 class OrderStatus(IntEnum):
-    CREATED = 1
-    PENDING_PAYMENT = 2
-    PAID = 3
-    SHIPPED = 4
-    COMPLETED = 5
-    CANCELED = 6
+    PENDING_PAYMENT = 1
+    PAID = 2
+    SHIPPED = 3
+    COMPLETED = 4
+    CANCELED = 5
 
     @classmethod
     def choices(cls):
