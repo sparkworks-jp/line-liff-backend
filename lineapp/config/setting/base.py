@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
-
+import logging.config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -78,6 +78,12 @@ REST_FRAMEWORK = {
 #     'UNAUTHENTICATED_USER': None,  
 #     'UNAUTHENTICATED_TOKEN': None,
 # }
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
+    'UNAUTHENTICATED_USER': None,
+    'UNAUTHENTICATED_TOKEN': None,
+}
 
 
 TEMPLATES = [
@@ -126,28 +132,22 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{asctime} {levelname} {module} {message}',
+            'format': '{asctime} {levelname} {name} {message}',
             'style': '{',
         },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': 'debug.log',
-            'formatter': 'verbose',
-            'encoding': 'utf-8'
-        },
     },
     'loggers': {
-        '': { 
-            'handlers': ['console'],
-            'level': 'INFO',
-        },
-        'order': {  
+        '': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
@@ -155,6 +155,7 @@ LOGGING = {
     },
 }
 
+logging.config.dictConfig(LOGGING)
 
 AUTH_PASSWORD_VALIDATORS = [
     {
