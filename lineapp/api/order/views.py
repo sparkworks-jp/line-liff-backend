@@ -92,7 +92,7 @@ def create_order(request):
         shippingFee = 100
         total_price = product_total_price + shippingFee
 
-        # 查询默认地址
+        # get default address
         default_address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
 
         if default_address is None:
@@ -190,13 +190,13 @@ def create_order(request):
 @api_view(['GET'])
 def get_order_detail(request, order_id):
     try:
-        # 1. 获取订单信息
+        # 1. get order data from Order
         order = Order.objects.get(
             order_id=order_id,
             deleted_flag=False
         )
 
-        # 2. 从订单项表获取所有数据
+        # 2. get order items data from OrderItem
         order_items = OrderItem.objects.filter(
             order_id=order_id,
             deleted_flag=False
@@ -207,11 +207,11 @@ def get_order_detail(request, order_id):
             'product_price'
         )
 
-        # 打印查询结果，看看是否有数据
-        print(f"Order items query: {order_items.query}")  # 打印实际执行的SQL
-        print(f"Found items: {list(order_items)}")  # 打印查询结果
+        # print result see if order exist or not 
+        print(f"Order items query: {order_items.query}")  
+        print(f"Found items: {list(order_items)}") 
 
-        # 3. 只获取商品图片
+        # 3. get product pics
         product_ids = [item['product_id'] for item in order_items]
         products = {
             p['product_id']: p['image']
@@ -220,7 +220,7 @@ def get_order_detail(request, order_id):
             ).values('product_id', 'image')
         }
 
-        # 4. 组合订单项数据 - 主要数据从order_items取，只有image从products取
+        # 4. assemble items data 
         items_data = []
         for item in order_items:
             items_data.append({
@@ -231,11 +231,11 @@ def get_order_detail(request, order_id):
                 'image': products.get(item['product_id'])
             })
 
-        # 5. 组装返回数据
+        # 5. assemble response data
         data = {
             'orderId': order.order_id,
             'trackingNumber': order.tracking_number,
-            'orderStatus': str(order.status).zfill(2),
+            'orderStatus': order.status,
             'items': items_data,
             'totalAmount': f'¥{order.total_price:,}' if order.total_price else '¥0',
             'discount': f'¥{order.discount_amount:,}' if order.discount_amount else '¥0',
@@ -378,7 +378,7 @@ def cancel_order(request, order_id):
         update_data = request.data.copy()
         update_data['updated_by'] = request.user_id if hasattr(request, 'user_id') else None
 
-        # 注文状態をキャンセル(6)に更新
+        # 注文状態をキャンセル(5)に更新
         serializer = OrderUpdateSerializer(order, data=update_data, partial=True)
         if not serializer.is_valid():
             logger.error(f"更新データが無効です: {serializer.errors}")
