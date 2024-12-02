@@ -21,8 +21,8 @@ def get_address_list(request):
     logger.info("----------------get_address_list-------------------")
 
     # Todo
-    # user_id = request.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
 
     user_address_list = UserAddress.objects.filter(user_id=user_id, deleted_flag=False)
@@ -62,8 +62,8 @@ def get_address_detail(request, address_id):
     logger.info("----------------get_address_detail-------------------")
 
     # Todo
-    # user_id = request.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     if address_id is None:
         message = {
@@ -114,8 +114,8 @@ def set_default_address(request, address_id):
     logger.info("----------------set_default_address-------------------")
 
     # Todo
-    # user_id = request.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     if address_id is None:
         message = {
@@ -163,8 +163,8 @@ def get_default_address(request):
     logger.info("----------------get_default_address-------------------")
 
     # Todo
-    # user_id = request.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     result = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
 
@@ -202,8 +202,8 @@ def update_address(request, address_id):
     logger.info("----------------update_address-------------------")
 
     # Todo
-    # user_id = request.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     try:
         user_address = UserAddress.objects.get(address_id=address_id)
@@ -240,8 +240,8 @@ def create_address(request):
     logger.info("----------------create_address-------------------")
 
     # Todo
-    # user_id = request.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     logger.info("request body data: {}".format(request.data))
     logger.info("user_id: {}".format(user_id))
@@ -272,8 +272,8 @@ def delete_address(request, address_id):
     logger.info("----------------delete_address-------------------")
 
     # Todo
-    # user_id = request.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     logger.info("user_id: {}".format(user_id))
 

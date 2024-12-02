@@ -197,13 +197,13 @@ class LineAuthMiddleware(MiddlewareMixin):
 
             # システムユーザーの取得または作成
             user = self.get_or_create_user(line_user_info)
-            
+
             # リクエストにユーザー情報を設定
-            request.user = user
-            request.line_user = line_user_info
+            request.user_info = user
             request.line_user_id = line_user_info.get('sub')
-            
-            logger.info(f"認証成功: user_id={user.user_id}, line_user_id={request.line_user_id}")
+
+            logger.info(f"認証成功: user_id={request.user_info.user_id}, line_user_id={request.line_user_id}")
+
             
         except Exception as e:
             logger.error(f"認証失敗: {str(e)}", exc_info=True)

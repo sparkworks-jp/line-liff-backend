@@ -31,8 +31,9 @@ logger = logging.getLogger(__name__)
 # @line_auth_required
 def create_order(request):
     logger.info("=== Starting order creation ===")
-    # user_id = request.line_user_id
-    user_id ="Uf1e196438ad2e407c977f1ede4a39580"
+    # Todo
+    user_id = request.user_info.user_id
+    # user_id ="Uf1e196438ad2e407c977f1ede4a39580"
     if not user_id:
         return Response({'error': 'User ID is required'}, status=400)
     try:

@@ -35,9 +35,8 @@ def create_payment(request, order_id):
     logger.info("----------------create_payment-------------------")
 
     # Todo
-    # user_id = request.user.user_id
-    # user_id = '01JD4G4GGWFJ6KBHNKYWT1F0T9'
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     # 未支払い状態の注文を取得
     pending_payment_order_info = Order.objects.filter(

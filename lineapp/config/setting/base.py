@@ -65,19 +65,19 @@ ROOT_URLCONF = 'config.urls'
 
 # LINE LIFF 配置
 LINE_LIFF_ID ='2006421613-ZrV2NXK1'
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'core.authentication.CustomAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
-    ]
-}
 # REST_FRAMEWORK = {
-#     'DEFAULT_AUTHENTICATION_CLASSES': [],
-#     'DEFAULT_PERMISSION_CLASSES': [],
-#     'UNAUTHENTICATED_USER': None,
-#     'UNAUTHENTICATED_TOKEN': None,
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'core.authentication.CustomAuthentication',
+#         'rest_framework.authentication.SessionAuthentication',
+#         'rest_framework.authentication.BasicAuthentication',
+#     ]
 # }
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
+    'UNAUTHENTICATED_USER': None,
+    'UNAUTHENTICATED_TOKEN': None,
+}
 
 
 TEMPLATES = [
