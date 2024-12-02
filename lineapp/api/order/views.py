@@ -263,8 +263,9 @@ def get_order_detail(request, order_id):
 @api_view(['GET'])
 def get_order_list(request):
     try:
-        # user_id = request.line_user_id
-        user_id = "Uf1e196438ad2e407c977f1ede4a39580"
+        # Todo
+        user_id = request.user_info.user_id
+        # user_id ="Uf1e196438ad2e407c977f1ede4a39580"
         if not user_id:
             return Response({'error': 'User ID is required'}, status=400)
 
