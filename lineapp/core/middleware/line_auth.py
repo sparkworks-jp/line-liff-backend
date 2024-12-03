@@ -147,7 +147,7 @@ class LineAuthMiddleware(MiddlewareMixin):
                     
                     # 新規ユーザーを作成
                     user = User.objects.create(
-                        id=str(ulid.new()),  
+                        user_id=str(ulid.new()),  
                         line_user_id=line_user_id,
                         mail=email,
                         user_name=name,
@@ -159,7 +159,7 @@ class LineAuthMiddleware(MiddlewareMixin):
                         updated_by=line_user_id
                     )
                     
-                    logger.info(f"新規ユーザー作成完了: user_id={user.id}")
+                    logger.info(f"新規ユーザー作成完了: user_id={user.user_id}")
                     return user
                     
         except Exception as e:
@@ -217,8 +217,9 @@ def line_auth_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         logger.info(f"デコレーターチェック: {view_func.__name__}")
-        
-        if not hasattr(request, 'line_user'):
+        logger.info("Request details: %s", request)
+
+        if not hasattr(request, 'user_info'):
             logger.error(f"認証必要: {view_func.__name__}")
             return JsonResponse({'error': 'LINE認証が必要です'}, status=401)
             
