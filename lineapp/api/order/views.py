@@ -381,6 +381,7 @@ def cancel_order(request, order_id):
         update_data['updated_by'] = request.user_id if hasattr(request, 'user_id') else None
 
         # 注文状態をキャンセル(5)に更新
+        update_data['status'] = 5
         serializer = OrderUpdateSerializer(order, data=update_data, partial=True)
         if not serializer.is_valid():
             logger.error(f"更新データが無効です: {serializer.errors}")
