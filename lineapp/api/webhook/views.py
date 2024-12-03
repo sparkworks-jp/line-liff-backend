@@ -1,4 +1,6 @@
 import logging
+
+from django.db import transaction
 from rest_framework.decorators import api_view
 
 from api.order.models import Order
@@ -44,75 +46,43 @@ def payment_status_webhook(request):
 
     order_info = Order.objects.filter(payment_id=merchant_order_id).first()
 
-    if state == 'COMPLETED' and str(
-            order_info.payment) == order_amount and order_info.status == OrderStatus.PENDING_PAYMENT:
-
-        Order.objects.filter(payment_id=merchant_order_id).update(status=OrderStatus.PAID, payment_date=paid_at)
-
-        response = {
-            "status": "success",
-            "message": "OK",
-            "errors": [],
-            "data": {}
-        }
-
-        return Response(response, status=status.HTTP_200_OK)
-
-    elif state == 'COMPLETED' and str(order_info.payment) != order_amount:
-
-        # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
-        logger.error(
-            f"The payment amount for the order is incorrect! order_id:{order_info.order_id}, payment_id:{order_info.payment_id}")
-
-        response = {
-            "status": "success",
-            "message": "OK",
-            "errors": [],
-            "data": {}
-        }
-
-        return Response(response, status=status.HTTP_200_OK)
-
-    elif state == 'COMPLETED' and order_info.status != OrderStatus.PENDING_PAYMENT:
-
-        # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
-        logger.error(
-            f"注文ステータスエラー! order_id:{order_info.order_id}, order_status:{order_info.status}, payment_id:{order_info.payment_id}")
-
-        response = {
-            "status": "success",
-            "message": "OK",
-            "errors": [],
-            "data": {}
-        }
-
-        return Response(response, status=status.HTTP_200_OK)
-
-    elif state == 'COMPLETED' and order_info is None:
-        # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
+    if order_info is None:
         logger.error(f"Order error! The order with successful payment does not exist. payment_id:{merchant_order_id}")
         logger.error(f"PayPay webhook request data:{request_data}")
-        response = {
-            "status": "success",
-            "message": "OK",
-            "errors": [],
-            "data": {}
-        }
+        return Response({"message": "OK"}, status=status.HTTP_200_OK)
 
-        return Response(response, status=status.HTTP_200_OK)
+    # 重複処理の防止: すでに処理済みの注文はスキップ
+    if order_info.status == OrderStatus.PAID:
+        logger.info(f"Webhook already processed for order_id:{order_info.order_id}, payment_id:{merchant_order_id} Skipping processing.")
+        return Response({"message": "OK"}, status=status.HTTP_200_OK)
 
-    else:
-        # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
-        if order_info is not None:
-            logger.error(f"Order payment error! order_id:{order_info.order_id}, order_status:{order_info.status}, payment_id:{order_info.payment_id}")
-        else:
-            logger.error(f"The order does not exist. payment_id:{merchant_order_id}")
-        logger.error(f"PayPay webhook request data:{request_data}")
-        response = {
-            "status": "success",
-            "message": "OK",
-            "errors": [],
-            "data": {}
-        }
+    try:
+        with transaction.atomic():
+            if state == 'COMPLETED':
+                if str(order_info.payment) == order_amount and order_info.status == OrderStatus.PENDING_PAYMENT:
+                    # Update the order status to PAID
+                    order_info.status = OrderStatus.PAID
+                    order_info.payment_date = paid_at
+                    order_info.save()
 
-        return Response(response, status=status.HTTP_200_OK)
+                    logger.info(f"Order {merchant_order_id} successfully updated to PAID.")
+                    return Response({"message": "OK"}, status=status.HTTP_200_OK)
+
+                elif str(order_info.payment) != order_amount:
+                    # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
+                    logger.error(
+                        f"Incorrect payment amount for order_id:{order_info.order_id}, payment_id:{order_info.payment_id}")
+                    return Response({"message": "OK"}, status=status.HTTP_200_OK)
+
+                elif order_info.status != OrderStatus.PENDING_PAYMENT:
+                    # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
+                    logger.error(
+                        f"Order status error! order_id:{order_info.order_id}, order_status:{order_info.status}, payment_id:{order_info.payment_id}")
+                    return Response({"message": "OK"}, status=status.HTTP_200_OK)
+
+            logger.error(f"Unexpected state or order issue for order_id:{order_info.order_id}, state:{state}")
+            return Response({"message": "OK"}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Error processing payment webhook for order_id:{merchant_order_id}. Exception: {str(e)}")
+        return Response({"message": "Internal Server Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
