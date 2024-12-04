@@ -12,4 +12,4 @@ Pillow==10.4.0
 colorama==0.4.6
 paypayopa==1.7
 line-bot-sdk==3.14.2
-openai==1.40.6
+openai==1.55.3
