@@ -10,12 +10,10 @@ from api.user.serializers import UserAddressSerializer
 from rest_framework import status
 from rest_framework.response import Response
 
-from core.middleware.line_auth import line_auth_required
 
 logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
-# @line_auth_required
 def get_address_list(request):
 
     logger.info("----------------get_address_list-------------------")
@@ -56,7 +54,6 @@ def get_address_list(request):
 
 
 @api_view(['GET'])
-# @line_auth_required
 def get_address_detail(request, address_id):
 
     logger.info("----------------get_address_detail-------------------")
@@ -107,8 +104,7 @@ def get_address_detail(request, address_id):
     return Response(response, status=status.HTTP_200_OK)
 
 
-@api_view(['PATCH'])
-# @line_auth_required
+@api_view(['PATCH']) 
 def set_default_address(request, address_id):
 
     logger.info("----------------set_default_address-------------------")
@@ -157,7 +153,6 @@ def set_default_address(request, address_id):
 
 
 @api_view(['GET'])
-# @line_auth_required
 def get_default_address(request):
 
     logger.info("----------------get_default_address-------------------")
@@ -196,7 +191,6 @@ def get_default_address(request):
     return Response(response, status=status.HTTP_200_OK)
 
 @api_view(['PUT'])
-# @line_auth_required
 def update_address(request, address_id):
 
     logger.info("----------------update_address-------------------")
@@ -233,8 +227,7 @@ def update_address(request, address_id):
         "data": {}
     }, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-# @line_auth_required
+@api_view(['POST']) 
 def create_address(request):
 
     logger.info("----------------create_address-------------------")
@@ -266,7 +259,6 @@ def create_address(request):
 
 
 @api_view(['DELETE'])
-# @line_auth_required
 def delete_address(request, address_id):
 
     logger.info("----------------delete_address-------------------")

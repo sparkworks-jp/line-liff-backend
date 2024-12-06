@@ -21,17 +21,15 @@ from .serializers import (
 )
 import ulid
 import logging
-from core.middleware.line_auth import line_auth_required
 from ..user.models import UserAddress
 
 logger = logging.getLogger(__name__)
 
 # check ページの支払いボタンには注文情報が保存され、注文ステータスは未払いです。
 @api_view(['POST'])
-# @line_auth_required
 def create_order(request):
     logger.info("=== Starting order creation ===")
-    # Todo
+
     user_id = request.user_info.user_id
     # user_id ="Uf1e196438ad2e407c977f1ede4a39580"
     if not user_id:
@@ -187,7 +185,7 @@ def create_order(request):
             'message': f'注文の作成中に予期せぬエラーが発生しました: {str(e)}'
         }, status=500)
 
-# @line_auth_required
+  
 @api_view(['GET'])
 def get_order_detail(request, order_id):
     try:
@@ -259,7 +257,7 @@ def get_order_detail(request, order_id):
             'message': '注文が見つかりません'
         }, status=404)
 
-# @line_auth_required
+  
 @api_view(['GET'])
 def get_order_list(request):
     try:
@@ -304,7 +302,7 @@ def get_order_list(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-# @line_auth_required
+  
 @api_view(['PATCH'])
 def update_order(request, order_id):
     try:
@@ -328,7 +326,7 @@ def update_order(request, order_id):
             'message': '注文が見つかりません'
         }, status=404)
 
-# @line_auth_required
+  
 @api_view(['PATCH'])
 def cancel_order(request, order_id):
 
@@ -338,6 +336,8 @@ def cancel_order(request, order_id):
         order = Order.objects.get(
             order_id=order_id,
             deleted_flag=False)
+        # todo status検査
+            # 前端有限制， order　キャンセルボタンは　未支払い以外の状態は表示できません
 
         # リクエストデータの検証
         serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
@@ -417,7 +417,7 @@ def cancel_order(request, order_id):
 
 
 
-# @line_auth_required
+  
 @api_view(['DELETE'])
 def delete_order(request, order_id):
     order = get_object_or_404(Order, order_id=order_id)
@@ -426,7 +426,7 @@ def delete_order(request, order_id):
 
 
 @api_view(['POST'])
-# @line_auth_required
+  
 def preview_order(request):
     logger.info("=== Starting get preview order ===")
 
@@ -445,7 +445,7 @@ def preview_order(request):
     product_total_price = 0
     for shop in product_list:
         product = Product.objects.filter(product_id=shop["product_id"]).first()
-        if not product or product.deleted_flag is True:
+        if  product.deleted_flag is True:
             response = {
                 "status": "error",
                 "message": f"商品ID {shop['product_id']} が存在しません。",
@@ -467,7 +467,7 @@ def preview_order(request):
         # 商品価格の計算
         product_total_price += product.product_price * shop["quantity"]
 
-    # 配送料の計算 (固定値を設定)
+    # todo 配送料の計算 (固定値を設定)
     shippingFee = 100
     total_price = product_total_price + shippingFee
 

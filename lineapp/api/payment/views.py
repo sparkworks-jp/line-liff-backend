@@ -6,13 +6,10 @@ from zoneinfo import ZoneInfo
 
 import paypayopa
 from rest_framework.decorators import api_view
-
 from api.order.models import Order
 from rest_framework import status
 from rest_framework.response import Response
-
 from common.constants import OrderStatus
-from core.middleware.line_auth import line_auth_required
 
 logger = logging.getLogger(__name__)
 PAYMENT_TIMEOUT_HOURS = 24
@@ -29,7 +26,7 @@ client.set_assume_merchant(PAYPAY_MERCHANT_ID)
 # 注文の詳細を確認 --> 注文状態を確認 (未支払い状態のみ支払いリンクを作成可能) --> 以前の支払いリンクを無効化 --> PayPayに支払いリンクをリクエスト --> 支払いリンクIDを注文に更新 --> 支払いリンクを返す
 
 @api_view(['POST'])
-# @line_auth_required
+  
 def create_payment(request, order_id):
 
     logger.info("----------------create_payment-------------------")
