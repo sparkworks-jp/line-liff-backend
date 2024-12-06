@@ -1,4 +1,5 @@
 from functools import wraps
+import os
 import jwt
 import requests
 import logging
@@ -9,42 +10,12 @@ from datetime import datetime
 from django.db import transaction
 import ulid
 
-logger = logging.getLogger(__name__)
+from core.utils.LineKeyManager import LineKeyManager
 
-# LINE Token验证 (LineAuthMiddleware)
-# ↓
-# token有效 -> 获取/创建用户
-# ↓
-# DRF认证 (CustomAuthentication)
-# 只检查:
-# 1. user是否存在(中间件是否成功)
-# 2. deleted_flag状态
+logger = logging.getLogger(__name__)
 
 class LineAuthentication:
     """LINE認証ツール"""
-
-    def get_line_keys(self):
-        """LINE公開鍵を取得"""
-        logger.info("1. LINE公開鍵の取得を開始")
-        try:
-            response = requests.get(
-                'https://api.line.me/oauth2/v2.1/certs',
-                timeout=10
-            )
-            logger.info(f"2. LINE APIレスポンス: status={response.status_code}")
-            logger.debug(f"2-1. レスポンス本文: {response.text}")
-            
-            if response.status_code != 200:
-                logger.error(f"3. LINE公開鍵の取得失敗: {response.status_code}")
-                raise Exception('LINE公開鍵の取得に失敗しました')
-                
-            keys = response.json()['keys']
-            logger.info(f"3. 公開鍵取得成功: {len(keys)}個の鍵を取得")
-            return keys
-            
-        except Exception as e:
-            logger.error(f"X. 公開鍵取得エラー: {str(e)}", exc_info=True)
-            raise
 
     def verify_id_token(self, id_token):
         """LINE IDトークンを検証"""
@@ -52,19 +23,25 @@ class LineAuthentication:
             logger.info("=== トークン検証開始 ===")
             logger.info(f"設定されているLIFF ID: {settings.LINE_LIFF_ID}")
             
-            # 解码 token 查看实际的 audience（无需验证签名）
             try:
                 unverified_payload = jwt.decode(id_token, options={
                     "verify_signature": False,
                     "verify_exp": False,
                     "verify_aud": False
                 })
+                # todo 事前チェック 実際にはaudience検証のみを行う
+                # 主に不要なネットワークリクエストを減らすため、公開鍵の取得なしで明らかなエラーを検出できる
+                # これは事前チェックステップで、トークンの構造が正しいか、特にaudience値を確認することが目的
+                # この時点では完全な検証は行わない理由：
+                # まだ公開鍵を取得していないため、署名を検証できない
+                # トークンの基本構造とコンテンツが正しいかを先に確認する必要がある
+                # トークンからkid（鍵ID）を取得して、適切な公開鍵を選択する必要がある
+
                 logger.info(f"トークンの中身: {unverified_payload}")
                 logger.info(f"トークンのaudience: {unverified_payload.get('aud')}")
-
-                # LINE LIFF SDK 的行为 - 它在生成 token 时可能只使用了 channel ID 作为 audience。
+                # LINE LIFF SDKの動作 - トークン生成時にchannel IDのみをaudienceとして使用する
                 token_aud = unverified_payload.get('aud')
-                setting_channel_id = settings.LINE_LIFF_ID.split('-')[0] 
+                setting_channel_id = os.getenv('CHANNEL_ID')
                 if token_aud != setting_channel_id:
                     logger.error(f"Channel ID不一致: token={token_aud}, setting={setting_channel_id}")
                     raise jwt.InvalidTokenError(
@@ -74,7 +51,7 @@ class LineAuthentication:
                 logger.error(f"トークン解析エラー: {str(e)}")
                 raise
 
-            # 获取 token 头部信息
+            #  token header 情報を取得
             header = jwt.get_unverified_header(id_token)
             kid = header.get('kid')
             alg = header.get('alg', 'RS256')
@@ -83,17 +60,16 @@ class LineAuthentication:
             if not kid:
                 raise jwt.InvalidTokenError('トークンヘッダーにkidがありません')
                 
-            # 获取公钥
-            keys = self.get_line_keys()
-            key = next((k for k in keys if k['kid'] == kid), None)
+            # 公開鍵を取得
+            key = LineKeyManager.get_line_key(kid)
             
             if not key:
                 raise jwt.InvalidTokenError('対応する公開鍵が見つかりません')
                 
-            # 验证签名并解码
+            # 署名を検証してデコードする
             jwk_algorithm = jwt.algorithms.ECAlgorithm if alg == 'ES256' else jwt.algorithms.RSAAlgorithm
             public_key = jwk_algorithm.from_jwk(key)
-            
+
             decoded = jwt.decode(
                 id_token,
                 public_key,
@@ -101,7 +77,13 @@ class LineAuthentication:
                 audience=setting_channel_id,
                 issuer='https://access.line.me'
             )
-            
+            # todo オフライン環境でも検証が可能かどうか   issuerパラメータはネットワークリクエストを行わずに、ローカルで妥当性チェックだけします
+            # issuer これは LINE プラットフォームの公式認証サーバーアドレスです（トークン発行元）
+            # LINE の全ての ID トークンはこのアドレスから発行されています
+            # JWT トークンを検証する際、トークンが正規の LINE サーバーから発行されたことを確認する必要があります
+            # 発行元を指定しない、または誤って指定した場合、トークンの署名が有効でも不正とみなされます
+            # これはセキュリティ対策で、他のサーバーによる偽造トークンを防ぎます
+
             logger.info("トークン検証成功")
             logger.debug(f"検証結果: {decoded}")
             return decoded
@@ -129,38 +111,44 @@ class LineAuthMiddleware(MiddlewareMixin):
         
         try:
             with transaction.atomic():
-                # LINE IDでユーザーを検索
-                try:
-                    user = User.objects.get(
-                        line_user_id=line_user_id,
-                        deleted_flag=False
-                    )
-                    logger.info(f"既存ユーザーを検出: user_id={user.user_id}")
-                    return user
-                except User.DoesNotExist:
-                    # ユーザーが存在しない場合、新規作成
+            # 全ての一致するユーザー(削除済みを含む)を検索
+                user = User.objects.filter(line_user_id=line_user_id).first()               
+                if user:
+                    if user.deleted_flag is True:
+                        logger.warning(
+                            f"削除済みユーザーを検出  - user_id: {user.user_id}, "
+                            f"line_user_id: {user.line_user_id}, "
+                        )
+                    else:
+                        logger.info(f"ユーザーを検出: user_id={user.user_id}"
+                                    f"line_user_id: {user.line_user_id}, "
+                                    )
+                        return user
+                else:
+
+                    #ユーザーが見つからない場合、新規作成
                     logger.info(f"新規ユーザーを作成: line_user_id={line_user_id}")
                     
                     # LINE情報から基本データを取得
-                    email = line_user_info.get('email', '')
+                    email = line_user_info.get('email', None)
                     name = line_user_info.get('name', f'LINE_{line_user_id[:8]}')
                     
                     # 新規ユーザーを作成
-                    user = User.objects.create(
-                        user_id=str(ulid.new()),  
+                    new_user = User.objects.create(
+                        user_id=str(ulid.new()),
                         line_user_id=line_user_id,
                         mail=email,
                         user_name=name,
                         gender='',
-                        role=1,
+                        role=0,
                         phone_number='',
                         deleted_flag=False,
                         created_by=line_user_id,
                         updated_by=line_user_id
                     )
                     
-                    logger.info(f"新規ユーザー作成完了: user_id={user.user_id}")
-                    return user
+                    logger.info(f"新規ユーザー作成完了: user_id={new_user.user_id}")
+                    return new_user
                     
         except Exception as e:
             logger.error(f"ユーザー取得/作成エラー: {str(e)}", exc_info=True)
@@ -172,7 +160,7 @@ class LineAuthMiddleware(MiddlewareMixin):
         logger.info(f"リクエストパス: {request.path}")
 
         # 認証除外パスの確認
-        EXEMPT_PATHS = [ '/api/webhook/', '/api/public/', '/static/']
+        EXEMPT_PATHS = [ '/api/chat/webhook/']
         if any(request.path.startswith(path) for path in EXEMPT_PATHS):
             logger.info(f"認証除外パス: {request.path}")
             return None
@@ -182,9 +170,8 @@ class LineAuthMiddleware(MiddlewareMixin):
         logger.info(f"Authorizationヘッダー: {auth_header[:30]}...")
 
         if not auth_header.startswith('Bearer '):
-            logger.error("認証ヘッダーが不正です")
+            logger.error("トークンのフォーマットがBearer フォーマットと一致していません")
             return JsonResponse({'error': '認証が必要です'}, status=401)
-
         try:
             # トークン検証とユーザー情報取得
             token = auth_header.split(' ')[1]
@@ -200,9 +187,7 @@ class LineAuthMiddleware(MiddlewareMixin):
 
             # リクエストにユーザー情報を設定
             request.user_info = user
-            request.line_user_id = line_user_info.get('sub')
-
-            logger.info(f"認証成功: user_id={request.user_info.user_id}, line_user_id={request.line_user_id}")
+            logger.info(f"認証成功 request.user_info={request.user_info}")
 
             
         except Exception as e:
@@ -211,18 +196,3 @@ class LineAuthMiddleware(MiddlewareMixin):
         
         logger.info("===== 認証処理完了 =====")
 
-
-def line_auth_required(view_func):
-    """LINE認証必須デコレーター"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        logger.info(f"デコレーターチェック: {view_func.__name__}")
-        logger.info("Request details: %s", request)
-
-        if not hasattr(request, 'user_info'):
-            logger.error(f"認証必要: {view_func.__name__}")
-            return JsonResponse({'error': 'LINE認証が必要です'}, status=401)
-            
-        logger.info(f"認証OK: {view_func.__name__}")
-        return view_func(request, *args, **kwargs)
-    return wrapper

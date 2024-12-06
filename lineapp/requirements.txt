@@ -13,3 +13,4 @@ colorama==0.4.6
 paypayopa==1.7
 line-bot-sdk==3.14.2
 openai==1.55.3
+freezegun==1.5.1

@@ -14,7 +14,6 @@ from openai import AsyncOpenAI
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, FlexSendMessage
-
 from .models import ChatHistory,Thread
 
 logger = logging.getLogger("django")
@@ -47,10 +46,7 @@ def handle_text_message(event):
         try:
             # 获取AI响应
             response = loop.run_until_complete(chat_by_line(event.message.text))
-            logger.info("メッセージ処理が完了しました")  
-
-            # response = loop.run_until_complete(chat_by_line(event.message.text))
-            # logger.info("メッセージ処理が完了しました")       
+            logger.info("メッセージ処理が完了しました")     
             if response.get('history_data'):
                 save_task = loop.create_task(save_history_async(response['history_data']))
                 logger.info("履歴の保存が完了しました")

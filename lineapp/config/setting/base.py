@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'api.user', 
     'api.chat', 
     'api.payment', 
-    'rest_framework',
+    'tests',
+
 ]
 
 MIDDLEWARE = [
@@ -112,6 +113,15 @@ DATABASES = {
         'PORT': '5432',  
         'OPTIONS': {
             'options': '-c search_path=line,public'
+        },
+        'TEST': {
+            'NAME': 'test_naruto',  
+            'OPTIONS': {
+                'options': '-c search_path=line,public', 
+            },
+            'MIGRATION_MODULES': {
+                'django_migrations': 'line.django_migrations'
+            }
         },
     }
 }

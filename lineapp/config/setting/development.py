@@ -12,6 +12,12 @@ DATABASES = {
         'OPTIONS': {
             'options': '-c search_path=line'
         },
+        'TEST': {
+            'NAME': 'test_naruto',  
+            'OPTIONS': {
+                'options': '-c search_path=line,public', 
+            },
+        },
     }
 }
 
