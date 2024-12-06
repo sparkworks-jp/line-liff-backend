@@ -257,7 +257,6 @@ def get_order_detail(request, order_id):
             'message': '注文が見つかりません'
         }, status=404)
 
-  
 @api_view(['GET'])
 def get_order_list(request):
     try:
@@ -302,7 +301,6 @@ def get_order_list(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-  
 @api_view(['PATCH'])
 def update_order(request, order_id):
     try:
@@ -326,107 +324,54 @@ def update_order(request, order_id):
             'message': '注文が見つかりません'
         }, status=404)
 
-  
+
 @api_view(['PATCH'])
 def cancel_order(request, order_id):
-
-    try:
-
+    
         # 注文情報を取得
-        order = Order.objects.get(
-            order_id=order_id,
-            deleted_flag=False)
-        # todo status検査
-            # 前端有限制， order　キャンセルボタンは　未支払い以外の状態は表示できません
+        order = Order.objects.filter(order_id=order_id, user_id=request.user_info.user_id, deleted_flag=False).first()
 
-        # リクエストデータの検証
-        serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
-        if not serializer.is_valid():
-            logger.warning(f"リクエストデータが無効です: {serializer.errors}")
-
+        # 注文状態は支払い待ちのみキャンセルできます
+        if order.status != OrderStatus.PENDING_PAYMENT:
             return Response({
                 'status': 'error',
-                'message': '無効なデータです',
-                'errors': serializer.errors
+                'message': 'キャンセルできません',
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # PayPay QRコードの処理
         if order.payment_qr_code_id:
-            try:
-                # QRコードの削除をPayPayに要求
-                response = delete_paypay_qr_code(order.payment_qr_code_id)
+            # QRコードの削除をPayPayに要求
+            response = delete_paypay_qr_code(order.payment_qr_code_id)
 
-                # QRコードが存在しない場合も正常として扱う
-                if response.get('resultInfo', {}).get('code') not in ['SUCCESS', 'DYNAMIC_QR_NOT_FOUND']:
-                    logger.error(f"PayPay QRコード削除失敗: {response}")
-                    return Response({
-                        'status': 'error',
-                        'message': 'QRコードの削除中にエラーが発生しました',
-                        'error': response.get('resultInfo', {}).get('message')
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # QRコードが存在しない場合も正常として扱う
+            if response and isinstance(response.get('data', {}), dict):
+                qr_status = response['data'].get('qrStatus')
+                if qr_status == 'DELETED':
+                    logger.info(f"order_id={order_id} PayPay QRコード削除成功")
+            else:
+                logger.warning(f"order_id={order_id} PayPay QRコード削除失敗またはエラー発生: {response}")
 
-            except Exception as e:
-                if 'DYNAMIC_QR_NOT_FOUND' not in str(e):
-                    logger.error(f"QRコード削除中にエラーが発生しました。order_id={order_id}, error={str(e)}")
-                    return Response({
-                        'status': 'error',
-                        'message': 'QRコードの削除中にエラーが発生しました',
-                        'error': str(e)
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                else:
-                    logger.warning(f"QRコードが既に存在しません: order_id={order_id}")
-
-        # user_id = request.user_id
-        update_data = request.data.copy()
-        update_data['updated_by'] = request.user_id if hasattr(request, 'user_id') else None
-
+        # DBデータ更新
+        order.updated_by = getattr(request.user_info, 'user_id', None)
+        order.payment_qr_code_id = None
         # 注文状態をキャンセル(5)に更新
-        update_data['status'] = 5
-        serializer = OrderUpdateSerializer(order, data=update_data, partial=True)
-        if not serializer.is_valid():
-            logger.error(f"更新データが無効です: {serializer.errors}")
-            return Response({
-                'status': 'error',
-                'message': '更新データが無効です',
-                'errors': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer.save()
+        order.status = OrderStatus.CANCELED 
+        order.save()
         logger.info(f"注文がキャンセルされました。order_id={order_id}")
 
-        return Response({
-            'status': 'success',
-            'message': '注文がキャンセルされました',
-            'data': serializer.data
-        })
-
-    except Order.DoesNotExist:
-        logger.warning(f"注文が見つかりません。order_id={order_id}")
-        return Response({
-            'status': 'error',
-            'message': '注文が見つかりません'
-        }, status=status.HTTP_404_NOT_FOUND)
-
-    except Exception as e:
-        logger.error(f"注文キャンセル中に予期せぬエラーが発生しました。order_id={order_id}, error={str(e)}")
-        return Response({
-            'status': 'error',
-            'message': 'システムエラーが発生しました',
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'status': 'success', 'message': '注文がキャンセルされました'})
 
 
-
-  
 @api_view(['DELETE'])
 def delete_order(request, order_id):
-    order = get_object_or_404(Order, order_id=order_id)
-    order.delete()
-    return Response({"message": "Order deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    
+        order = Order.objects.filter(order_id=order_id, user_id=request.user_info.user_id, deleted_flag=False).first()
+        order.deleted_flag = True
+        order.save()
+        return Response({'status': 'success', 'message': '注文削除が成功しました'})
 
 
 @api_view(['POST'])
-  
 def preview_order(request):
     logger.info("=== Starting get preview order ===")
 
