@@ -2,37 +2,6 @@ from rest_framework import serializers
 import ulid
 from .models import Order, OrderItem
 
-class OrderItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
-
-class OrderItemCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = '__all__'
-        extra_kwargs = {
-            'deleted_flag': {'default': False}
-        }
-
-class OrderCreateSerializer(serializers.ModelSerializer):
-    items = OrderItemCreateSerializer(many=True, required=False)
-
-    class Meta:
-        model = Order
-        fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
-    payment_qr_code_id = serializers.CharField(allow_null=True, required=False)
-
-    def create(self, validated_data):
-        items_data = validated_data.pop('items', [])
-        order = Order.objects.create(**validated_data)
-        
-        for item_data in items_data:
-            OrderItem.objects.create(order_id=order.order_id, **item_data)
-        
-        return order
 
 class OrderUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,6 +15,13 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             'payment',
             'updated_by'
         ]
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField()

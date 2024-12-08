@@ -13,17 +13,57 @@ from api.payment.views import delete_paypay_qr_code
 
 
 from django.db import transaction
-from .serializers import (
-    OrderCreateSerializer,
-    OrderUpdateSerializer,
-    OrderDetailSerializer,
-    OrderItemCreateSerializer
-)
+from .serializers import ( OrderUpdateSerializer, OrderDetailSerializer)
 import ulid
 import logging
 from ..user.models import UserAddress
 
 logger = logging.getLogger(__name__)
+
+def validate_and_prepare_products(product_list, user_id):
+    validated_products = []
+    total_price = 0
+
+    for item in product_list:
+        product = Product.objects.filter(product_id=item['product_id'], deleted_flag=False).first()
+        if not product:
+            raise serializers.ValidationError(f"商品ID {item['product_id']} が存在しません")
+        if product.sale_status == SaleStatus.STOP_SALE:
+            raise serializers.ValidationError(f"商品 {product.product_name} は現在販売停止中です")
+
+        quantity = int(item['quantity'])
+        subtotal = product.product_price * quantity
+        total_price += subtotal
+
+        validated_products.append({
+            'item_id': str(ulid.new()),
+            'product_id': product.product_id,
+            'product_name': product.product_name,
+            'product_price': product.product_price,
+            'account': quantity,
+            'subtotal': subtotal,
+            'deleted_flag': False,
+            'created_by': user_id
+        })
+
+    return validated_products, total_price
+
+def prepare_order_items(product_list, order_id, user_id):
+    return [
+        OrderItem(
+            item_id=str(ulid.new()),
+            order_id=order_id,
+            product_id=item['product_id'],
+            product_name=item['product_name'],
+            product_price=item['product_price'],
+            account=item['account'],
+            subtotal=item['subtotal'],
+            deleted_flag=False,
+            created_by=user_id,
+        )
+        for item in product_list
+    ]
+
 
 # check ページの支払いボタンには注文情報が保存され、注文ステータスは未払いです。
 @api_view(['POST'])
@@ -31,163 +71,61 @@ def create_order(request):
     logger.info("=== Starting order creation ===")
 
     user_id = request.user_info.user_id
-    # user_id ="Uf1e196438ad2e407c977f1ede4a39580"
-    if not user_id:
-        return Response({'error': 'User ID is required'}, status=400)
-    try:
-        request_product_list = request.data.get('product_list', None)
+    # user_id ="Uf1e196438ad2e407c977f1ede4a39580" //for develop
+    
+    request_product_list = request.data.get('product_list', None)
+    product_list, product_total_price = validate_and_prepare_products(request_product_list, user_id)
+    
+    # Mock shipping_fee
+    shipping_fee = 100 
+    total_price = product_total_price + shipping_fee
+    
+    address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
 
-        if not request_product_list:
-            response = {
-                "status": "error",
-                "message": "商品が選択されていません。",
-                "errors": [],
-                "data": {}
-            }
-
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-        product_list = []
-        product_total_price = 0
-        for shop in request_product_list:
-            product = Product.objects.filter(product_id=shop["product_id"]).first()
-            if not product or product.deleted_flag is True:
-                response = {
-                    "status": "error",
-                    "message": f"商品ID {shop['product_id']} が存在しません。",
-                    "errors": [],
-                    "data": {}
-                }
-                return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-            if product.sale_status == SaleStatus.STOP_SALE:
-                response = {
-                    "status": "error",
-                    "message": f"商品 {product.product_name} は現在販売停止中です。",
-                    "errors": [],
-                    "data": {}
-                }
-                return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-            item_data = {
-                'item_id': str(ulid.new()),
-                'order_id': None,
-                'product_id': product.product_id,
-                'product_name': product.product_name,
-                'product_price': product.product_price,
-                'account': int(shop["quantity"]),
-                'deleted_flag': False,
-                'subtotal': product.product_price * int(shop["quantity"]),
-                'created_by': user_id
-            }
-
-            product_list.append(item_data)
-
-            # 在庫確認（必要に応じて）
-            # 商品価格の計算
-            product_total_price += product.product_price * shop["quantity"]
-
-        # 配送料の計算 (固定値を設定)
-        shippingFee = 100
-        total_price = product_total_price + shippingFee
-
-        # get default address
-        default_address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
-
-        if default_address is None:
-            response = {
-                "status": "error",
-                "message": "あすすめの住所は存在しません",
-                "errors": [],
-                "data": {}
-            }
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-
+    # DBデータ更新
+    with transaction.atomic():
+        
         order_data = {
             'order_id': str(ulid.new()),
             'user_id': user_id,
             'order_date': timezone.now(),
-            'name': default_address.last_name + ' ' + default_address.first_name,
-            'name_katakana': default_address.last_name_katakana + ' ' + default_address.first_name_katakana,
-            'phone_number': default_address.phone_number,
-            'address': default_address.prefecture_address + default_address.city_address + default_address.district_address + default_address.detail_address,
-            'postal_code': default_address.postal_code,
-            'carriage': shippingFee,
+            'name': f"{address.last_name} {address.first_name}",
+            'name_katakana': f"{address.last_name_katakana} {address.first_name_katakana}",
+            'phone_number': address.phone_number,
+            'address': f"{address.prefecture_address}{address.city_address}{address.district_address}{address.detail_address}",
+            'postal_code': address.postal_code,
+            'carriage': shipping_fee,
             'total_price': product_total_price,
             'status': OrderStatus.PENDING_PAYMENT.value,
-            'deleted_flag': False,
-            # 'tracking_number': '111',
-            'created_by': user_id,
             'payment': total_price,
-            # 'payment_qr_code_id': request.data.get('payment_qr_code_id'),
+            'created_by': user_id,
+            'deleted_flag' : False,
         }
-
-        print(order_data)
-
-        logger.info(f"Processed order data: {order_data}")
-
-        with transaction.atomic():
-            # Validate and save order
-            order_serializer = OrderCreateSerializer(data=order_data)
-            if not order_serializer.is_valid():
-                logger.error(f"Order validation errors: {order_serializer.errors}")
-                return Response({
-                    'status': 'error',
-                    'message': '注文データが無効です',
-                    'errors': order_serializer.errors
-                }, status=400)
-
-            order = order_serializer.save()
-            logger.info(f"Order created successfully with ID: {order.order_id}")
-
-            # Process cart items
-            if not product_list:
-                logger.error("Cart is empty")
-                raise serializers.ValidationError("カートが空です")
-
-            # items_data = []
-            for item in product_list:
-                item['order_id'] = order.order_id
-
-            logger.info(f"Processing order items: {product_list}")
-
-            # Validate and save order items
-            item_serializer = OrderItemCreateSerializer(data=product_list, many=True)
-            if not item_serializer.is_valid():
-                logger.error(f"Order items validation errors: {item_serializer.errors}")
-                raise serializers.ValidationError(item_serializer.errors)
-
-            item_serializer.save()
-            logger.info("Order items saved successfully")
-
-            # Prepare response
-            order_detail = OrderDetailSerializer(order).data
-
-            logger.info("=== Order creation completed successfully ===")
-            return Response({
-                'status': 'success',
-                'order_id': order_data['order_id'],
-                'message': '注文が正常に作成されました',
-                'data': order_detail
-            })
-
-    except serializers.ValidationError as e:
-        logger.error(f"Validation error: {str(e)}")
-        return Response({
-            'status': 'error',
-            'message': f'データ検証エラー: {str(e)}'
-        }, status=400)
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        return Response({
-            'status': 'error',
-            'message': f'注文の作成中に予期せぬエラーが発生しました: {str(e)}'
-        }, status=500)
+        order = Order.objects.create(**order_data)
+        
+        order_items = [
+            OrderItem(
+                item_id=str(ulid.new()),
+                order_id=order.order_id,
+                product_id=item['product_id'],
+                product_name=item['product_name'],
+                product_price=item['product_price'],
+                account=item['account'],
+                subtotal=item['subtotal'],
+                deleted_flag=False,
+                created_by=user_id,
+            )
+        for item in product_list
+        ]
+        OrderItem.objects.bulk_create(order_items)
+  
+    order_detail = OrderDetailSerializer(order).data
+    return Response({'status': 'success','order_id': order.order_id,'message': '注文が正常に作成されました','data': order_detail}, status=200)
 
   
 @api_view(['GET'])
 def get_order_detail(request, order_id):
+    logger.info("=== Starting get order detail ===")
     try:
         # 1. get order data from Order
         order = Order.objects.get(
@@ -259,10 +197,10 @@ def get_order_detail(request, order_id):
 
 @api_view(['GET'])
 def get_order_list(request):
+    logger.info("=== Starting get order list ===")
     try:
-        # Todo
         user_id = request.user_info.user_id
-        # user_id ="Uf1e196438ad2e407c977f1ede4a39580"
+        # user_id ="Uf1e196438ad2e407c977f1ede4a39580"         # For develop
         if not user_id:
             return Response({'error': 'User ID is required'}, status=400)
 
@@ -324,7 +262,6 @@ def update_order(request, order_id):
             'message': '注文が見つかりません'
         }, status=404)
 
-
 @api_view(['PATCH'])
 def cancel_order(request, order_id):
     
@@ -339,28 +276,26 @@ def cancel_order(request, order_id):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # PayPay QRコードの処理
-        if order.payment_qr_code_id:
+        if order.payment_qr_code_id:            
             # QRコードの削除をPayPayに要求
             response = delete_paypay_qr_code(order.payment_qr_code_id)
 
             # QRコードが存在しない場合も正常として扱う
-            if response and isinstance(response.get('data', {}), dict):
-                qr_status = response['data'].get('qrStatus')
-                if qr_status == 'DELETED':
-                    logger.info(f"order_id={order_id} PayPay QRコード削除成功")
+            if response.get('resultInfo', {}).get('code') not in ['SUCCESS', 'DYNAMIC_QR_NOT_FOUND']:
+                    logger.warning(f"order_id={order_id} PayPay QRコード削除失敗またはエラー発生: {response}")
             else:
-                logger.warning(f"order_id={order_id} PayPay QRコード削除失敗またはエラー発生: {response}")
+                order.payment_qr_code_id = None
+                logger.info(f"order_id={order_id} PayPay QRコード削除成功")
 
         # DBデータ更新
-        order.updated_by = getattr(request.user_info, 'user_id', None)
-        order.payment_qr_code_id = None
+        order.updated_by = request.user_info.user_id
+        
         # 注文状態をキャンセル(5)に更新
-        order.status = OrderStatus.CANCELED 
+        order.status = OrderStatus.CANCELED.value
         order.save()
         logger.info(f"注文がキャンセルされました。order_id={order_id}")
 
         return Response({'status': 'success', 'message': '注文がキャンセルされました'})
-
 
 @api_view(['DELETE'])
 def delete_order(request, order_id):
@@ -375,42 +310,11 @@ def delete_order(request, order_id):
 def preview_order(request):
     logger.info("=== Starting get preview order ===")
 
-    product_list = request.data.get('product_list', None)
+    request_product_list = request.data.get('product_list', None)
 
-    if not product_list:
-        response = {
-            "status": "error",
-            "message": "商品が選択されていません。",
-            "errors": [],
-            "data": {}
-        }
-
-        return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-    product_total_price = 0
-    for shop in product_list:
-        product = Product.objects.filter(product_id=shop["product_id"]).first()
-        if  product.deleted_flag is True:
-            response = {
-                "status": "error",
-                "message": f"商品ID {shop['product_id']} が存在しません。",
-                "errors": [],
-                "data": {}
-            }
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-        if product.sale_status == SaleStatus.STOP_SALE:
-            response = {
-                "status": "error",
-                "message": f"商品 {product.product_name} は現在販売停止中です。",
-                "errors": [],
-                "data": {}
-            }
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-        # 在庫確認（必要に応じて）
-        # 商品価格の計算
-        product_total_price += product.product_price * shop["quantity"]
+    user_id = request.user_info.user_id
+    
+    product_list, product_total_price = validate_and_prepare_products(request_product_list, user_id)
 
     # todo 配送料の計算 (固定値を設定)
     shippingFee = 100
@@ -422,11 +326,5 @@ def preview_order(request):
         "total_price": total_price
     }
 
-    response = {
-        "status": "success",
-        "message": "注文情報の事前取得が成功しました。",
-        "errors": [],
-        "data": data
-    }
-
+    response = {"status": "success", "message": "注文情報の事前取得が成功しました。", "data": data}
     return Response(response, status=status.HTTP_200_OK)
