@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 
 from common.constants import SaleStatus, OrderStatus
-from lineapp.common.exceptions import CustomAPIException
+from common.exceptions import CustomAPIException
 from .models import Order, OrderItem
 from api.shop.models import Product
 from api.payment.views import delete_paypay_qr_code

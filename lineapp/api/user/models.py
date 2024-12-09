@@ -29,7 +29,7 @@ class User(models.Model):
     user_id = models.CharField(max_length=256, primary_key=True, db_comment='ユーザーID')
     line_user_id = models.CharField(max_length=256, unique=True,  db_comment='lineユーザー番号')
     mail = models.CharField(null=True, blank=True,max_length=256, db_comment='メールアドレス')
-    user_name = models.CharField(max_length=256, db_comment='ユーザー名')
+    user_name = models.CharField(null=True,blank=True,max_length=256, db_comment='ユーザー名')
     role = models.IntegerField(db_comment='ロール:user:0, admin:1')
     deleted_flag = models.BooleanField(default=False, db_comment='削除フラグ')
     token_usage = models.IntegerField(default=0, db_comment='トークン使用量')
