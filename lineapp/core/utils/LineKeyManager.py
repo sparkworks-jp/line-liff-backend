@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import os
 import requests
 import logging
 
@@ -8,7 +9,7 @@ class LineKeyManager:
     """LINE公開鍵管理クラス"""
     _keys_cache = {} 
     _last_update = None 
-    _cache_duration = timedelta(hours=24)  
+    _cache_duration = timedelta(hours=int(os.getenv('LINE_KEY_CACHE_DURATION_HOURS', 24)))
 
     @classmethod
     def get_line_key(cls, kid):
@@ -62,8 +63,9 @@ class LineKeyManager:
             # 公開鍵キャッシュを更新
             cls._keys_cache = {key['kid']: key for key in keys_data}
             cls._last_update = datetime.now()
-            
             logger.info(f"公開鍵キャッシュを更新しました。{len(cls._keys_cache)}個の鍵を取得")
+
+            logger.info(f"公開鍵キャッシュを更新しました。{(cls._keys_cache)}個の鍵を取得")
             
         except Exception as e:
             logger.error(f"キャッシュ更新エラー: {str(e)}")
