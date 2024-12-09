@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 
 from common.constants import SaleStatus, OrderStatus
+from lineapp.common.exceptions import CustomAPIException
 from .models import Order, OrderItem
 from api.shop.models import Product
 from api.payment.views import delete_paypay_qr_code
@@ -64,12 +65,10 @@ def prepare_order_items(product_list, order_id, user_id):
         for item in product_list
     ]
 
-
 # check ページの支払いボタンには注文情報が保存され、注文ステータスは未払いです。
 @api_view(['POST'])
 def create_order(request):
     logger.info("=== Starting order creation ===")
-
     user_id = request.user_info.user_id
     # user_id ="Uf1e196438ad2e407c977f1ede4a39580" //for develop
     
@@ -125,14 +124,15 @@ def create_order(request):
   
 @api_view(['GET'])
 def get_order_detail(request, order_id):
-    logger.info("=== Starting get order detail ===")
-    try:
+        logger.info("=== Starting get order detail ===")
         # 1. get order data from Order
-        order = Order.objects.get(
-            order_id=order_id,
-            deleted_flag=False
-        )
-
+        order = Order.objects.filter(order_id=order_id, deleted_flag=False).first()
+        if not order:
+            raise CustomAPIException(
+                status=status.HTTP_404_NOT_FOUND,
+                message="注文が見つかりません",
+                severity="error"
+            )
         # 2. get order items data from OrderItem
         order_items = OrderItem.objects.filter(
             order_id=order_id,
@@ -143,6 +143,12 @@ def get_order_detail(request, order_id):
             'account',
             'product_price'
         )
+        if not order_items.exists():
+            raise CustomAPIException(
+                status=status.HTTP_404_NOT_FOUND,
+                message="注文項目が見つかりません",
+                severity="error"
+            )
 
         # print result see if order exist or not 
         print(f"Order items query: {order_items.query}")  
@@ -189,27 +195,27 @@ def get_order_detail(request, order_id):
             'data': data
         })
 
-    except Order.DoesNotExist:
-        return Response({
-            'status': 'error',
-            'message': '注文が見つかりません'
-        }, status=404)
 
 @api_view(['GET'])
 def get_order_list(request):
-    logger.info("=== Starting get order list ===")
-    try:
+        logger.info("=== Starting get order list ===")
         user_id = request.user_info.user_id
         # user_id ="Uf1e196438ad2e407c977f1ede4a39580"         # For develop
         if not user_id:
-            return Response({'error': 'User ID is required'}, status=400)
+            raise CustomAPIException(
+                status=status.HTTP_404_NOT_FOUND,
+                message="ユーザーIDが必要です",
+                severity="error"
+            )
 
         logger.info("Accessing get_order_list view")
         orders = Order.objects.filter(user_id=user_id,deleted_flag=False).order_by('-created_at')
         order_list = []
 
+        if not orders.exists():
+            return Response({"status": "success", "data": []})
+
         for order in orders:
-            try:
                 items = OrderItem.objects.filter(order_id=order.order_id)
                 items_summary = ', '.join([f"{item.product_name} x{item.account}" for item in items])
 
@@ -222,9 +228,7 @@ def get_order_list(request):
                     "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S")
                 }
                 order_list.append(order_data)
-            except Exception as e:
-                logger.error(f"Error processing order {order.order_id}: {str(e)}")
-                continue
+
 
         logger.info(f"Successfully retrieved {len(order_list)} orders")
         response = {
@@ -232,48 +236,50 @@ def get_order_list(request):
             "data": order_list
         }
         return Response(response, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error in get_order_list: {str(e)}")
-        return Response(
-            {"status": "error", "message": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
 
 @api_view(['PATCH'])
 def update_order(request, order_id):
-    try:
-        order = Order.objects.get(order_id=order_id, deleted_flag=False)
+        order = Order.objects.filter(order_id=order_id, deleted_flag=False).first()
+        if not order:
+            raise CustomAPIException(
+                status=status.HTTP_404_NOT_FOUND,
+                message="注文が見つかりません",
+                severity="error"
+            )
         serializer = OrderUpdateSerializer(order, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                'status': 'success',
-                'message': '注文が更新されました',
-                'data': OrderDetailSerializer(order).data
-            })
+        if not serializer.is_valid():
+            raise CustomAPIException(
+                status=status.HTTP_400_BAD_REQUEST,
+                message="無効なデータです",
+                severity="error"
+            )
+
+        serializer.save()
         return Response({
-            'status': 'error',
-            'message': '無効なデータです',
-            'errors': serializer.errors
-        }, status=400)
-    except Order.DoesNotExist:
-        return Response({
-            'status': 'error',
-            'message': '注文が見つかりません'
-        }, status=404)
+            'status': 'success',
+            'message': '注文が更新されました',
+            'data': OrderDetailSerializer(order).data
+        })
+
 
 @api_view(['PATCH'])
 def cancel_order(request, order_id):
     
         # 注文情報を取得
         order = Order.objects.filter(order_id=order_id, user_id=request.user_info.user_id, deleted_flag=False).first()
-
+        if not order:
+            raise CustomAPIException(
+                status=status.HTTP_404_NOT_FOUND,
+                message="注文が見つかりません",
+                severity="error"
+            )
         # 注文状態は支払い待ちのみキャンセルできます
         if order.status != OrderStatus.PENDING_PAYMENT:
-            return Response({
-                'status': 'error',
-                'message': 'キャンセルできません',
-            }, status=status.HTTP_400_BAD_REQUEST)
+            raise CustomAPIException(
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                message="キャンセルできません",
+                severity="error"
+            )
 
         # PayPay QRコードの処理
         if order.payment_qr_code_id:            
@@ -304,7 +310,6 @@ def delete_order(request, order_id):
         order.deleted_flag = True
         order.save()
         return Response({'status': 'success', 'message': '注文削除が成功しました'})
-
 
 @api_view(['POST'])
 def preview_order(request):
