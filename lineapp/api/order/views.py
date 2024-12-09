@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.db import transaction
 
-from common.constants import SaleStatus, OrderStatus
+from common.constants import SaleStatus, OrderStatus, shipping_fees, regions
 from common.exceptions import CustomAPIException
 from .models import Order, OrderItem
 from ..shop.models import Product
@@ -15,6 +15,7 @@ from .serializers import ( OrderDetailSerializer)
 
 import ulid
 import logging
+import re
 
 
 logger = logging.getLogger(__name__)
@@ -30,13 +31,15 @@ def create_order(request):
     # user_id ="Uf1e196438ad2e407c977f1ede4a39580" //for develop
 
     request_product_list = request.data.get('product_list', None)
+    
     product_list, product_total_price = validate_and_prepare_products(request_product_list, user_id)
-
-    # Mock shipping_fee TODO
-    shipping_fee = 100
+    
+    address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
+    
+    shipping_fee = calculate_shipping_fee(address.postal_code)
+    
     total_price = product_total_price + shipping_fee
 
-    address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
 
     # DBデータ更新
     with transaction.atomic():
@@ -159,7 +162,7 @@ def get_order_list(request):
             "id": order.order_id,
             "date": order.order_date.strftime("%Y-%m-%d"),
             "items": items_summary,
-            "total": f"¥{order.total_price:,.0f}",
+            "total": f"¥{order.payment:,.0f}",
             "status": order.status,
             "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -233,19 +236,20 @@ def preview_order(request):
 
     product_list, product_total_price = validate_and_prepare_products(request_product_list, user_id)
 
-    # todo 配送料の計算 (固定値を設定)
-    shippingFee = 100
-    total_price = product_total_price + shippingFee
+    address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
+
+    shipping_fee = calculate_shipping_fee(address.postal_code)
+
+    total_price = product_total_price + shipping_fee
 
     data = {
         "product_total_price": product_total_price,
-        "shipping_fee": shippingFee,
+        "shipping_fee": shipping_fee,
         "total_price": total_price
     }
 
     response = {"status": "success", "message": "注文情報の事前取得が成功しました。", "data": data}
     return Response(response, status=status.HTTP_200_OK)
-
 
 
 def validate_and_prepare_products(product_list, user_id):
@@ -275,3 +279,20 @@ def validate_and_prepare_products(product_list, user_id):
         })
 
     return validated_products, total_price
+
+
+def get_region_from_postcode(postcode):
+    if not re.match(r'^\d{3}-\d{4}$', postcode):
+        raise CustomAPIException(
+            message="郵便番号フォマード不正",
+            severity="error"
+        )
+    region_code = int(postcode.split('-')[0])
+    for region, codes in regions.items():
+        if region_code in codes:
+            return region
+    return "Unknown Region"
+
+def calculate_shipping_fee(postcode):
+    region = get_region_from_postcode(postcode)
+    return shipping_fees.get(region, 3000)  
