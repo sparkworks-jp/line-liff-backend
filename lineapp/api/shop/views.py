@@ -23,7 +23,6 @@ def get_product(request, product_id):
     return Response(serializer.data)
 
 @api_view(['GET'])
-  
 def list_products(request):
     products = Product.objects.all()
     if not products.exists():

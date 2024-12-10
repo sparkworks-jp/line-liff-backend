@@ -3,19 +3,6 @@ import ulid
 from .models import Order, OrderItem
 
 
-class OrderUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = [
-            'status', 
-            'total_price', 
-            'tracking_number', 
-            'shipment_date', 
-            'payment_date', 
-            'payment',
-            'updated_by'
-        ]
-
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
