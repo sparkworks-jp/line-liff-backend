@@ -47,22 +47,22 @@ def custom_exception_handler(exc, context):
             status=exc.status_code
         )
     
-    elif response is not None:
-        # DRF標準例外の処理
-        logger.error(
-            f"{view_name}でDRF例外が発生: {str(exc)}",
-            extra={
-                'status_code': response.status_code,
-                'view': view_name,
-                'path': request.path if request else '不明',
-                'method': request.method if request else '不明'
-            }
-        )
-        return Response({
-            'status': 'エラー',
-            'message': str(exc),
-            'severity': 'エラー'
-        }, status=response.status_code)
+    # elif response is not None:
+    #     # DRF標準例外の処理
+    #     logger.error(
+    #         f"{view_name}でDRF例外が発生: {str(exc)}",
+    #         extra={
+    #             'status_code': response.status_code,
+    #             'view': view_name,
+    #             'path': request.path if request else '不明',
+    #             'method': request.method if request else '不明'
+    #         }
+    #     )
+    #     return Response({
+    #         'status': 'エラー',
+    #         'message': str(exc),
+    #         'severity': 'エラー'
+    #     }, status=response.status_code)
     
     else:
         # 未捕捉の例外処理
