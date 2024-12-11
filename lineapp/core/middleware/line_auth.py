@@ -26,8 +26,8 @@ class LineAuthentication:
             try:
                 unverified_payload = jwt.decode(id_token, options={
                     "verify_signature": False,
-                    "verify_exp": True,
-                    "verify_aud": True,
+                    "verify_exp": False,
+                    "verify_aud": False,
                 })
                 # todo 事前チェック 実際にはaudience検証のみを行う
                 # 主に不要なネットワークリクエストを減らすため、公開鍵の取得なしで明らかなエラーを検出できる

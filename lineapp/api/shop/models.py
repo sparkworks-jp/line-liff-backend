@@ -2,7 +2,7 @@ from django.db import models
 class Product(models.Model):
     product_id = models.CharField(max_length=50, primary_key=True, db_comment='商品番号')
     product_name = models.CharField(max_length=255, db_comment='商品名')
-    image = models.ImageField(upload_to='products/', null=True, blank=True, db_comment='商品画像URL')     
+    image = models.URLField(null=True, blank=True, db_comment='商品画像URL')     
     description = models.TextField(null=True, blank=True, db_comment='商品説明')
     webpageUrl = models.URLField( max_length=2083,null=True,blank=True,db_comment='サイトURL')
     allergens = models.CharField(max_length=255, null=True, blank=True, db_comment='アレルゲン')  
