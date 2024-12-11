@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 @ip_whitelist_required
 def payment_status_webhook(request):
     logger.info("----------------payment_status_webhook-------------------")
-
+    client_ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
+    logger.info(f"Payment webhook request from IP: {client_ip}")
     merchant_order_id = request.data.get('merchant_order_id', None)
     order_amount = request.data.get('order_amount', None)
     state = request.data.get('state', None)

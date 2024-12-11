@@ -2,6 +2,8 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+
+from common.exceptions import CustomAPIException
 from .models import Product
 from .serializers import ProductSerializer
 from common.constants import SaleStatus
@@ -14,10 +16,11 @@ def list_products(request):
         deleted_flag=False 
     )
     if not products.exists():
-        return Response({
-            'message': '商品データはまだありません',
-            'data': []
-        }, status=status.HTTP_200_OK)
+        raise CustomAPIException(
+            status=status.HTTP_404_NOT_FOUND,
+            message="商品データはまだありません",
+            severity="error"
+        )
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
 

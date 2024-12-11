@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from common.exceptions import CustomAPIException
 import paypayopa
 from rest_framework.decorators import api_view
 from api.order.models import Order
@@ -12,8 +13,8 @@ from rest_framework.response import Response
 from common.constants import OrderStatus
 
 logger = logging.getLogger(__name__)
-PAYMENT_TIMEOUT_HOURS = 24
-TIMEZONE = "Asia/Tokyo"
+PAYMENT_TIMEOUT_HOURS = int(os.getenv('PAYMENT_TIMEOUT_HOURS', '24'))
+TIMEZONE = os.getenv("TIMEZONE")
 PAYPAY_API_KEY = os.getenv("PAYPAY_API_KEY")
 PAYPAY_API_SECRET = os.getenv("PAYPAY_API_SECRET")
 PAYPAY_CLIENT_ID = os.getenv("PAYPAY_CLIENT_ID")
@@ -32,8 +33,8 @@ def create_payment(request, order_id):
     logger.info("----------------create_payment-------------------")
 
     # Todo
-    user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    # user_id = request.user_info.user_id
+    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     # 未支払い状態の注文を取得
     pending_payment_order_info = Order.objects.filter(
@@ -44,33 +45,22 @@ def create_payment(request, order_id):
     ).first()
     # 未支払い状態の注文が存在しない場合
     if pending_payment_order_info is None:
-        message = {
-            'status': 'error',
-            "message": "未支払いの注文が存在しません。",
-            "errors": [{
-                "code": 400,
-                "message": "未支払いの注文が存在しません。"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        raise CustomAPIException(
+            status=status.HTTP_404_NOT_FOUND,
+            message="未支払いの注文が存在しません。",
+            severity="error"
+        )
 
     # 注文が24時間を超えていないか確認
     jst_now = datetime.now(ZoneInfo(TIMEZONE))
     if jst_now - pending_payment_order_info.created_at > timedelta(PAYMENT_TIMEOUT_HOURS):
-        message = {
-            'status': 'error',
-            "message": "注文がタイムアウトしました。支払いはできません。",
-            "errors": [{
-                "code": 400,
-                "message": "注文がタイムアウトしました。支払いはできません。"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+        raise CustomAPIException(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message="注文がタイムアウトしました。支払いはできません。",
+            severity="error"
+        )
 
     logger.info(f"支払いリンクの作成を開始します。order_id={order_id}, user_id={user_id}")
-
     try:
 
         # 以前に支払いリンクが作成されていない場合
@@ -121,17 +111,11 @@ def create_payment(request, order_id):
 
     except Exception as e:
         logger.exception(f"支払いリンク作成中に例外が発生しました。order_id={order_id}, error={str(e)}")
-
-        response = {
-            'status': 'error',
-            "message": "システムエラーが発生しました。",
-            "errors": [{
-                "code": 500,
-                "message": "予期しないエラーが発生しました。"
-            }],
-            "data": {}
-        }
-        return Response(response, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        raise CustomAPIException(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message="システムエラーが発生しました。",
+            severity="error"
+        )
 
 
 def create_paypay_qr_code(order_id, amount):
@@ -144,6 +128,7 @@ def create_paypay_qr_code(order_id, amount):
             "redirectUrl": f"{APP_HOST_NAME}/paymentcomplete",
             "redirectType": "WEB_LINK",
             "orderDescription": "注文の説明",
+            "expiryDate": get_payment_expiry_date(),
             "amount": {
                 "amount": amount,
                 "currency": "JPY",
@@ -165,3 +150,12 @@ def delete_paypay_qr_code(qr_code_id):
         logger.error(f"QRコード削除中に例外が発生しました。qr_code_id={qr_code_id}, error={str(e)}")
         raise
 
+def get_payment_expiry_date():
+   """
+   支払いリンクの有効期限を取得
+   現在時刻からPAYMENT_TIMEOUT_HOURS時間後を計算
+   """
+   jst_now = datetime.now(ZoneInfo('Asia/Tokyo'))
+   expiry_time = jst_now + timedelta(hours=PAYMENT_TIMEOUT_HOURS)
+   # PayPay指定の日時フォーマット：yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+   return expiry_time.strftime('%Y-%m-%dT%H:%M:%S.000Z')
