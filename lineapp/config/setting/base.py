@@ -74,7 +74,7 @@ LINE_LIFF_ID ='2006421613-ZrV2NXK1'
 #     ]
 # }
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'path.to.exceptions.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'common.exceptions.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': [],
     'UNAUTHENTICATED_USER': None,
