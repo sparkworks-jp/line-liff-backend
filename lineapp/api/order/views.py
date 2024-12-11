@@ -5,8 +5,9 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.db import transaction
 
-from common.constants import SaleStatus, OrderStatus, shipping_fees, regions
+from common.constants import SaleStatus, OrderStatus, shipping_fees
 from common.exceptions import CustomAPIException
+from common.util import join_with_space, join_without_space, format_currency, format_date, format_datetime, summarize_items
 from .models import Order, OrderItem
 from ..shop.models import Product
 from ..user.models import UserAddress
@@ -15,7 +16,6 @@ from .serializers import ( OrderDetailSerializer)
 
 import ulid
 import logging
-import re
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ def create_order(request):
     
     address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
     
-    shipping_fee = calculate_shipping_fee(address.postal_code)
+    shipping_fee = calculate_shipping_fee(address.prefecture_address)
     
     total_price = product_total_price + shipping_fee
 
@@ -48,10 +48,10 @@ def create_order(request):
             'order_id': str(ulid.new()),
             'user_id': user_id,
             'order_date': timezone.now(),
-            'name': f"{address.last_name} {address.first_name}",
-            'name_katakana': f"{address.last_name_katakana} {address.first_name_katakana}",
+            'name': join_with_space(address.last_name,address.first_name),
+            'name_katakana': join_with_space(address.last_name_katakana, address.first_name_katakana),
             'phone_number': address.phone_number,
-            'address': f"{address.prefecture_address}{address.city_address}{address.district_address}{address.detail_address}",
+            'address': join_without_space(address.prefecture_address,address.city_address, address.district_address, address.detail_address),
             'postal_code': address.postal_code,
             'carriage': shipping_fee,
             'total_price': product_total_price,
@@ -126,12 +126,12 @@ def get_order_detail(request, order_id):
         'trackingNumber': order.tracking_number,
         'orderStatus': order.status,
         'items': items_data,
-        'totalAmount': f'¥{order.total_price:,}' if order.total_price else '¥0',
-        'discount': f'¥{order.discount_amount:,}' if order.discount_amount else '¥0',
-        'finalAmount': f'¥{order.payment:,}' if order.payment else '¥0',
-        'deliveryFee': f'¥{order.carriage:,}' if order.carriage else '¥0',
-        'orderDate': order.order_date.strftime('%Y-%m-%d') if order.order_date else None,
-        'estimatedDelivery': order.estimated_delivery_date.strftime('%Y-%m-%d') if order.estimated_delivery_date else None,
+        'totalAmount': format_currency(order.total_price),
+        'discount': format_currency(order.discount_amount),
+        'finalAmount': format_currency(order.payment),
+        'deliveryFee': format_currency(order.carriage),
+        'orderDate': format_date(order.order_date),
+        'estimatedDelivery': format_date(order.estimated_delivery_date),
         'postalCode': order.postal_code,
         'address': order.address,
     }
@@ -157,14 +157,14 @@ def get_order_list(request):
     order_list = []
     for order in orders:
         items = OrderItem.objects.filter(order_id=order.order_id ,deleted_flag=False)
-        items_summary = ', '.join([f"{item.product_name} x{item.account}" for item in items])
+        items_summary = summarize_items(items)
         order_data = {
             "id": order.order_id,
             "date": order.order_date.strftime("%Y-%m-%d"),
             "items": items_summary,
-            "total": f"¥{order.payment:,.0f}",
+            "total": format_currency(order.payment),
             "status": order.status,
-            "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            "created_at": format_datetime(order.created_at)
         }
         order_list.append(order_data)
 
@@ -238,7 +238,7 @@ def preview_order(request):
 
     address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
 
-    shipping_fee = calculate_shipping_fee(address.postal_code)
+    shipping_fee = calculate_shipping_fee(address.prefecture_address)
 
     total_price = product_total_price + shipping_fee
 
@@ -281,18 +281,6 @@ def validate_and_prepare_products(product_list, user_id):
     return validated_products, total_price
 
 
-def get_region_from_postcode(postcode):
-    if not re.match(r'^\d{3}-\d{4}$', postcode):
-        raise CustomAPIException(
-            message="郵便番号フォマード不正",
-            severity="error"
-        )
-    region_code = int(postcode.split('-')[0])
-    for region, codes in regions.items():
-        if region_code in codes:
-            return region
-    return "Unknown Region"
-
-def calculate_shipping_fee(postcode):
-    region = get_region_from_postcode(postcode)
-    return shipping_fees.get(region, 3000)  
+def calculate_shipping_fee(prefecture_id):
+    shipping_fee = shipping_fees.get(prefecture_id)
+    return shipping_fee
