@@ -8,7 +8,7 @@ from common.exceptions import CustomAPIException
 from .models import Product
 from .serializers import ProductSerializer
 from django.shortcuts import get_object_or_404
-
+from common.constants import SaleStatus
 
 @api_view(['GET'])
 def get_product(request, product_id):
@@ -24,7 +24,10 @@ def get_product(request, product_id):
 
 @api_view(['GET'])
 def list_products(request):
-    products = Product.objects.all()
+    products = Product.objects.filter(
+        sale_status=SaleStatus.ON_SALE, 
+        deleted_flag=False 
+    )
     if not products.exists():
         return Response({
             'message': '商品データはまだありません',
