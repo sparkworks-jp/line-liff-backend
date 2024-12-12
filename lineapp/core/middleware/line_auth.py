@@ -22,13 +22,14 @@ class LineAuthentication:
         try:
             logger.info("=== トークン検証開始 ===")
             logger.info(f"設定されているLIFF ID: {settings.LINE_LIFF_ID}")
-            
+            CHANNEL_ID = os.getenv('CHANNEL_ID')
+
             try:
                 unverified_payload = jwt.decode(id_token, options={
                     "verify_signature": False,
-                    "verify_exp": False,
-                    "verify_aud": False,
-                })
+                    "verify_exp": True,
+                    "verify_aud": True,
+                }, audience=CHANNEL_ID)
                 # todo 事前チェック 実際にはaudience検証のみを行う
                 # 主に不要なネットワークリクエストを減らすため、公開鍵の取得なしで明らかなエラーを検出できる
                 # これは事前チェックステップで、トークンの構造が正しいか、特にaudience値を確認することが目的
@@ -160,7 +161,7 @@ class LineAuthMiddleware(MiddlewareMixin):
         logger.info(f"リクエストパス: {request.path}")
 
         # 認証除外パスの確認
-        EXEMPT_PATHS = [ '/api/chat/webhook/','/api/webhook/']
+        EXEMPT_PATHS = [ '/api/webhook/chat/','/api/webhook/payment/']
         if any(request.path.startswith(path) for path in EXEMPT_PATHS):
             logger.info(f"認証除外パス: {request.path}")
             return None
