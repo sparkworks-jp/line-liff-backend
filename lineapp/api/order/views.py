@@ -237,7 +237,16 @@ def preview_order(request):
     product_list, product_total_price = validate_and_prepare_products(request_product_list, user_id)
 
     address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
+    if address is None:
+        data = {
+                "product_total_price": product_total_price,
+                "shipping_fee": 0,
+                "total_price": product_total_price
+            }
 
+        response = {"status": "success", "message": "注文情報の事前取得が成功しました。", "data": data}
+        return Response(response, status=status.HTTP_200_OK)
+  
     shipping_fee = calculate_shipping_fee(address.prefecture_address)
 
     total_price = product_total_price + shipping_fee
