@@ -1,14 +1,12 @@
 import logging
-from datetime import datetime
-
 import ulid
-from django.shortcuts import render
-from rest_framework.decorators import api_view
-
 from api.user.models import UserAddress
 from api.user.serializers import UserAddressSerializer
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from common.exceptions import CustomAPIException
+from django.utils.timezone import now
 
 
 logger = logging.getLogger(__name__)
@@ -18,174 +16,96 @@ def get_address_list(request):
 
     logger.info("----------------get_address_list-------------------")
 
-    # Todo
     user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
-
+    # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
     user_address_list = UserAddress.objects.filter(user_id=user_id, deleted_flag=False)
-
-    address_list = []
-    if user_address_list:
-        for user_address in user_address_list:
-            address_info = {
-                "address_id": user_address.address_id,
-                "last_name": user_address.last_name,
-                "first_name": user_address.first_name,
-                "phone_number": user_address.phone_number,
-                "prefecture_address": user_address.prefecture_address,
-                "city_address": user_address.city_address,
-                "district_address": user_address.district_address,
-                "detail_address": user_address.detail_address,
-                "postal_code": user_address.postal_code,
-                "is_default": user_address.is_default,
-            }
-            address_list.append(address_info)
+    if not user_address_list.exists():
+        raise CustomAPIException(
+                status=status.HTTP_404_NOT_FOUND,
+                message="住所情報が見つかりませんでした。",
+                severity="error"
+            )
+        
+    serializer = UserAddressSerializer(user_address_list, many=True)
 
     response = {
         'status': 'success',
-        "message": "住所の一览情報が正常に取得されました。",
-        "errors": [],
+        "message": "住所の一覧情報が正常に取得されました。",
         "data": {
-            "address_list": address_list
+            "address_list": serializer.data
         }
     }
     return Response(response, status=status.HTTP_200_OK)
-
 
 @api_view(['GET'])
 def get_address_detail(request, address_id):
 
     logger.info("----------------get_address_detail-------------------")
 
-    # Todo
     user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
-    if address_id is None:
-        message = {
-            'status': 'error',
-            "message": "address_id はなし",
-            "errors": [{
-                "code": 404,
-                "message": "address_id はなし"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
-
-    result = UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).first()
-
-    address_info = {}
-    if result:
-        address_info = {
-            "address_id": result.address_id,
-            "last_name": result.last_name,
-            "first_name": result.first_name,
-            "last_name_katakana": result.last_name_katakana,
-            "first_name_katakana": result.first_name_katakana,
-            "phone_number": result.phone_number,
-            "prefecture_address": result.prefecture_address,
-            "city_address": result.city_address,
-            "district_address": result.district_address,
-            "detail_address": result.detail_address,
-            "postal_code": result.postal_code,
-            "is_default": result.is_default,
-        }
+    address = UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).first()  
+    if not address:
+        raise CustomAPIException(
+                status=status.HTTP_404_NOT_FOUND,
+                message="住所情報が見つかりませんでした。",
+                severity="error"
+            )
+    serializer = UserAddressSerializer(address)
 
     response = {
         'status': 'success',
         "message": "住所詳細情報が正常に取得されました。",
-        "errors": [],
         "data": {
-            "address_detail": address_info
+            "address_detail": serializer.data
         }
     }
     return Response(response, status=status.HTTP_200_OK)
-
 
 @api_view(['PATCH']) 
 def set_default_address(request, address_id):
 
     logger.info("----------------set_default_address-------------------")
-
-    # Todo
     user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
-
-    if address_id is None:
-        message = {
-            'status': 'error',
-            "message": "address_idはなし",
-            "errors": [{
-                "code": 404,
-                "message": "address_idはなし"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+    # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
     address_info = UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).first()
-
-    if address_info is None:
-        message = {
-            'status': 'error',
-            "message": "住所が存在しません",
-            "errors": [{
-                "code": 404,
-                "message": "住所が存在しません"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
-
+    if not address_info:
+           raise CustomAPIException(
+                   status=status.HTTP_404_NOT_FOUND,
+                   message="住所情報が見つかりませんでした。",
+                   severity="error"
+                   )
     UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).update(is_default=False)
-
     UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).update(is_default=True)
 
-    response = {
-        'status': 'success',
-        "message": "デフォルト住所が正常に設定されました。",
-        "errors": [],
-        "data": {}
-    }
+    response = {'status': 'success', "message": "デフォルト住所が正常に設定されました。"}
     return Response(response, status=status.HTTP_200_OK)
-
 
 @api_view(['GET'])
 def get_default_address(request):
 
     logger.info("----------------get_default_address-------------------")
-
-    # Todo
     user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
-    result = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
-
-    address_info = {}
-    if result:
-        address_info = {
-            "address_id": result.address_id,
-            "last_name": result.last_name,
-            "first_name": result.first_name,
-            "last_name_katakana": result.last_name_katakana,
-            "first_name_katakana": result.first_name_katakana,
-            "phone_number": result.phone_number,
-            "prefecture_address": result.prefecture_address,
-            "city_address": result.city_address,
-            "district_address": result.district_address,
-            "detail_address": result.detail_address,
-            "postal_code": result.postal_code,
-            "is_default": result.is_default,
-        }
+    address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
+    if not address:
+           raise CustomAPIException(
+                   status=status.HTTP_404_NOT_FOUND,
+                   message="住所情報が見つかりませんでした。",
+                   severity="error"
+                   )
+    serializer = UserAddressSerializer(address)
 
     response = {
         "status": "success",
         "message": "デフォルト住所情報が正常に取得されました。",
         "errors": [],
         "data": {
-            "address_detail": address_info
+            "address_detail": serializer.data
         }
     }
     return Response(response, status=status.HTTP_200_OK)
@@ -194,113 +114,109 @@ def get_default_address(request):
 def update_address(request, address_id):
 
     logger.info("----------------update_address-------------------")
-
-    # Todo
     user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
-    try:
-        user_address = UserAddress.objects.get(address_id=address_id)
-    except UserAddress.DoesNotExist:
-        return Response({
-            "error"
-            "message": "住所が見つかりませんでした。",
-            "errors": [],
-            "data": {}
-        }, status=status.HTTP_404_NOT_FOUND)
-
-    serializer = UserAddressSerializer(user_address, data=request.data, context={'user_id': user_id})
-
+    address = UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).first()
+    if not address:
+           raise CustomAPIException(
+                   status=status.HTTP_404_NOT_FOUND,
+                   message="住所情報が見つかりませんでした。",
+                   severity="error"
+                   )
+    serializer = UserAddressSerializer(instance=address, data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        validated_data = serializer.validated_data
+        address.last_name = validated_data.get('last_name', address.last_name)
+        address.first_name = validated_data.get('first_name', address.first_name)
+        address.last_name_katakana = validated_data.get('last_name_katakana', address.last_name_katakana)
+        address.first_name_katakana = validated_data.get('first_name_katakana', address.first_name_katakana)
+        address.phone_number = validated_data.get('phone_number', address.phone_number)
+        address.prefecture_address = validated_data.get('prefecture_address_id', address.prefecture_address)
+        address.city_address = validated_data.get('city_address', address.city_address)
+        address.district_address = validated_data.get('district_address', address.district_address)
+        address.detail_address = validated_data.get('detail_address', address.detail_address)
+        address.postal_code = validated_data.get('postal_code', address.postal_code)
+        address.created_by = user_id
+        address.created_at = now()
+        address.updated_by = user_id
+        address.updated_at = now()
+        address.save()
         return Response({
             "status": "success",
-            "message": "住所が正常に更新されました。",
-            "errors": [],
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+            "message": "住所が正常に更新されました。"
+    }, status=status.HTTP_200_OK)
+    else:
+        raise CustomAPIException(
+                   status=status.HTTP_400_BAD_REQUEST,
+                   message="住所更新失敗",
+                   severity="error"
+                   )
 
-    return Response({
-        "status": "error",
-        "message": "住所更新失敗",
-        "errors": serializer.errors,
-        "data": {}
-    }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST']) 
 def create_address(request):
 
     logger.info("----------------create_address-------------------")
-
-    # Todo
     user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
-
+    # user_id ="01JE5TBDC3G4HKQTC807AV9HTX"
     logger.info("request body data: {}".format(request.data))
-    logger.info("user_id: {}".format(user_id))
 
-    serializer = UserAddressSerializer(data=request.data, context={'user_id': user_id})
-
+    serializer = UserAddressSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        validated_data = serializer.validated_data
+        address = UserAddress.objects.create(
+                address_id=str(ulid.new()),
+                user_id=user_id,
+                last_name=validated_data.get('last_name'),
+                first_name=validated_data.get('first_name'),
+                last_name_katakana=validated_data.get('last_name_katakana'),
+                first_name_katakana=validated_data.get('first_name_katakana'),
+                phone_number=validated_data.get('phone_number'),
+                prefecture_address=validated_data.get('prefecture_address_id'),
+                city_address=validated_data.get('city_address'),
+                district_address=validated_data.get('district_address'),
+                detail_address=validated_data.get('detail_address'),
+                postal_code=validated_data.get('postal_code'),
+                is_default=False,
+                deleted_flag=False,
+                created_by=user_id,
+                updated_by=user_id
+            )
+        logger.info("Address created successfully: {}".format(address.address_id))
         return Response({
             "status": "success",
             "message": "住所が正常に作成されました。",
-            "errors": [],
-            "data": serializer.data
         }, status=status.HTTP_201_CREATED)
-
-    return Response({
-        "status": "error",
-        "message": "住所作成失敗",
-        "errors": serializer.errors,
-        "data": {}
-    }, status=status.HTTP_400_BAD_REQUEST)
-
+    else:
+        raise CustomAPIException(
+                   status=status.HTTP_400_BAD_REQUEST,
+                   message="住所作成が失敗しました",
+                   severity="error"
+                   )
 
 @api_view(['DELETE'])
 def delete_address(request, address_id):
 
     logger.info("----------------delete_address-------------------")
 
-    # Todo
     user_id = request.user_info.user_id
-    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
-
+    # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
     logger.info("user_id: {}".format(user_id))
-
-    if address_id is None:
-        message = {
-            "status": "error",
-            "message": "address_id はなし",
-            "errors": [{
-                "code": 404,
-                "message": "address_id はなし"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
     address_info = UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).first()
 
-    if address_info is None:
-        message = {
-            "status": "error",
-            "message": "住所が存在しません",
-            "errors": [{
-                "code": 404,
-                "message": "住所が存在しません"
-            }],
-            "data": {}
-        }
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+    if not address_info:
+        raise CustomAPIException(
+            status=status.HTTP_404_NOT_FOUND,
+            message="住所が存在しません",
+            severity="error"
+        )
 
     UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).update(deleted_flag=True)
 
     response = {
         "status": "success",
-        "message": "住所が正常に削除されました。",
-        "errors": [],
-        "data": {}
+        "message": "住所が正常に削除されました。"
     }
     return Response(response, status=status.HTTP_200_OK)
