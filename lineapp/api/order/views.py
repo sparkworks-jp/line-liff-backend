@@ -220,10 +220,32 @@ def cancel_order(request, order_id):
 
 @api_view(['DELETE'])
 def delete_order(request, order_id):
-    order = Order.objects.filter(order_id=order_id, user_id=request.user_info.user_id, deleted_flag=False).first()
-    order.deleted_flag = True
-    order.save()
-    return Response({'status': 'success', 'message': '注文削除が成功しました'})
+    order = Order.objects.filter(
+        order_id=order_id, 
+        user_id=request.user_info.user_id,
+        deleted_flag=False
+    ).first()
+    
+    if not order:
+        raise CustomAPIException(
+            status=status.HTTP_404_NOT_FOUND,
+            message="注文が見つかりません",
+            severity="error"
+        )
+    if order.status in [1, 2]:
+        raise CustomAPIException(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message="支払い待ちまたは支払い済みの注文は削除できません",
+            severity="error"
+        )
+    else:
+        order.deleted_flag = True
+        order.save()
+        
+        return Response({
+            'status': 'success',
+            'message': '注文削除が成功しました'
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
