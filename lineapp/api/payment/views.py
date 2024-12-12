@@ -33,8 +33,8 @@ def create_payment(request, order_id):
     logger.info("----------------create_payment-------------------")
 
     # Todo
-    # user_id = request.user_info.user_id
-    user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
+    user_id = request.user_info.user_id
+    # user_id = 'Uf1e196438ad2e407c977f1ede4a39580'
 
     # 未支払い状態の注文を取得
     pending_payment_order_info = Order.objects.filter(
@@ -71,6 +71,9 @@ def create_payment(request, order_id):
 
             if response['resultInfo']['code'] == 'SUCCESS':
                 payment_link = response['data']['url']
+                logger.info(f"新規支払いリンク生成: {payment_link}")
+                logger.info(f"支払いQRコードID: {response['data']['codeId']}")
+                logger.info(f"Merchant Payment ID: {merchant_payment_id}")
                 payment_link_response = {
                     'status': 'success',
                     "message": "支払いリンクが正常に取得されました。",
@@ -98,6 +101,10 @@ def create_payment(request, order_id):
                     payment_qr_code_id = response['data']['codeId']
                     Order.objects.filter(order_id=order_id).update(payment_id=merchant_payment_id, payment_qr_code_id=payment_qr_code_id)
                     payment_link = response['data']['url']
+                    logger.info(f"更新後の支払いリンク: {payment_link}")
+                    logger.info(f"更新後のQRコードID: {response['data']['codeId']}")
+                    logger.info(f"更新後のMerchant Payment ID: {merchant_payment_id}")
+
                     payment_link_response = {
                         'status': 'success',
                         "message": "支払いリンクが正常に取得されました。",
@@ -128,7 +135,6 @@ def create_paypay_qr_code(order_id, amount):
             "redirectUrl": f"{APP_HOST_NAME}/paymentcomplete",
             "redirectType": "WEB_LINK",
             "orderDescription": "注文の説明",
-            "expiryDate": get_payment_expiry_date(),
             "amount": {
                 "amount": amount,
                 "currency": "JPY",
@@ -150,12 +156,3 @@ def delete_paypay_qr_code(qr_code_id):
         logger.error(f"QRコード削除中に例外が発生しました。qr_code_id={qr_code_id}, error={str(e)}")
         raise
 
-def get_payment_expiry_date():
-   """
-   支払いリンクの有効期限を取得
-   現在時刻からPAYMENT_TIMEOUT_HOURS時間後を計算
-   """
-   jst_now = datetime.now(ZoneInfo('Asia/Tokyo'))
-   expiry_time = jst_now + timedelta(hours=PAYMENT_TIMEOUT_HOURS)
-   # PayPay指定の日時フォーマット：yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
-   return expiry_time.strftime('%Y-%m-%dT%H:%M:%S.000Z')
