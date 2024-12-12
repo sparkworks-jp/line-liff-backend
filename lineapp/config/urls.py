@@ -20,7 +20,7 @@ urlpatterns = [
     path('api/shop/', include('api.shop.urls')),
     path('api/order/', include('api.order.urls')),
     path('api/user/', include('api.user.urls')),
-    path('api/chat/', include('api.chat.urls')),
+    path('api/webhook/chat/', include('api.chat.urls')),
     path('api/payment/', include('api.payment.urls')),
-    path('api/webhook/', include('api.webhook.urls')),
+    path('api/webhook/payment/', include('api.webhook.urls')),
 ]
