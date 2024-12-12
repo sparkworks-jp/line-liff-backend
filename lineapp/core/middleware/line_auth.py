@@ -160,7 +160,7 @@ class LineAuthMiddleware(MiddlewareMixin):
         logger.info(f"リクエストパス: {request.path}")
 
         # 認証除外パスの確認
-        EXEMPT_PATHS = [ '/api/chat/webhook/']
+        EXEMPT_PATHS = [ '/api/chat/webhook/','/api/webhook/']
         if any(request.path.startswith(path) for path in EXEMPT_PATHS):
             logger.info(f"認証除外パス: {request.path}")
             return None
