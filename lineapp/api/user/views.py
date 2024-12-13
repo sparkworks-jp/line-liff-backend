@@ -14,35 +14,25 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 def get_address_list(request):
 
-    logger.info("----------------get_address_list-------------------")
-
+    logger.info("==========get_address_list=============")
     user_id = request.user_info.user_id
     # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
     user_address_list = UserAddress.objects.filter(user_id=user_id, deleted_flag=False)
-    if not user_address_list.exists():
-        raise CustomAPIException(
-                status=status.HTTP_404_NOT_FOUND,
-                message="住所情報が見つかりませんでした。",
-                severity="error"
-            )
-        
     serializer = UserAddressSerializer(user_address_list, many=True)
 
     response = {
         'status': 'success',
         "message": "住所の一覧情報が正常に取得されました。",
         "data": {
-            "address_list": serializer.data
+            "address_list": serializer.data  
         }
     }
     return Response(response, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_address_detail(request, address_id):
-
-    logger.info("----------------get_address_detail-------------------")
-
+    logger.info("==========get_address_detail==========")
     user_id = request.user_info.user_id
     # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
@@ -54,7 +44,6 @@ def get_address_detail(request, address_id):
                 severity="error"
             )
     serializer = UserAddressSerializer(address)
-
     response = {
         'status': 'success',
         "message": "住所詳細情報が正常に取得されました。",
@@ -66,28 +55,26 @@ def get_address_detail(request, address_id):
 
 @api_view(['PATCH']) 
 def set_default_address(request, address_id):
-
-    logger.info("----------------set_default_address-------------------")
+    logger.info("==========set_default_address==========")
     user_id = request.user_info.user_id
     # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
-    address_info = UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).first()
-    if not address_info:
+    UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).update(is_default=False)
+    changeAddress = UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).update(is_default=True)
+    if changeAddress == 1:
+        response = {'status': 'success', "message": "デフォルト住所が正常に設定されました。"}
+        return Response(response, status=status.HTTP_200_OK)
+    else:
            raise CustomAPIException(
                    status=status.HTTP_404_NOT_FOUND,
-                   message="住所情報が見つかりませんでした。",
+                   message="デフォルト住所設定が失敗しました。",
                    severity="error"
                    )
-    UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).update(is_default=False)
-    UserAddress.objects.filter(address_id=address_id, user_id=user_id, deleted_flag=False).update(is_default=True)
-
-    response = {'status': 'success', "message": "デフォルト住所が正常に設定されました。"}
-    return Response(response, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_default_address(request):
 
-    logger.info("----------------get_default_address-------------------")
+    logger.info("==========get_default_address==========")
     user_id = request.user_info.user_id
     # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
@@ -113,7 +100,7 @@ def get_default_address(request):
 @api_view(['PUT'])
 def update_address(request, address_id):
 
-    logger.info("----------------update_address-------------------")
+    logger.info("==========update_address==========")
     user_id = request.user_info.user_id
     # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
 
@@ -157,7 +144,7 @@ def update_address(request, address_id):
 @api_view(['POST']) 
 def create_address(request):
 
-    logger.info("----------------create_address-------------------")
+    logger.info("==========create_address==========")
     user_id = request.user_info.user_id
     # user_id ="01JE5TBDC3G4HKQTC807AV9HTX"
     logger.info("request body data: {}".format(request.data))
@@ -198,7 +185,7 @@ def create_address(request):
 @api_view(['DELETE'])
 def delete_address(request, address_id):
 
-    logger.info("----------------delete_address-------------------")
+    logger.info("==========delete_address==========")
 
     user_id = request.user_info.user_id
     # user_id ="01JE5TBDC3G4HKQTC807AV9HTX" #for develop
