@@ -3,6 +3,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from django.utils import timezone
 
 from common.exceptions import CustomAPIException
 import paypayopa
@@ -21,7 +22,7 @@ PAYPAY_CLIENT_ID = os.getenv("PAYPAY_CLIENT_ID")
 PAYPAY_MERCHANT_ID = os.getenv("PAYPAY_MERCHANT_ID")
 APP_HOST_NAME = os.getenv("APP_HOST_NAME")
 client = paypayopa.Client(auth=(PAYPAY_API_KEY, PAYPAY_API_SECRET),
-                          production_mode=False)
+                          production_mode=os.getenv("IS_PRODUCTION_MODE"))
 client.set_assume_merchant(PAYPAY_MERCHANT_ID)
 
 # 注文の詳細を確認 --> 注文状態を確認 (未支払い状態のみ支払いリンクを作成可能) --> 以前の支払いリンクを無効化 --> PayPayに支払いリンクをリクエスト --> 支払いリンクIDを注文に更新 --> 支払いリンクを返す
@@ -52,7 +53,7 @@ def create_payment(request, order_id):
         )
 
     # 注文が24時間を超えていないか確認
-    jst_now = datetime.now(ZoneInfo(TIMEZONE))
+    jst_now = timezone.now()
     if jst_now - pending_payment_order_info.created_at > timedelta(PAYMENT_TIMEOUT_HOURS):
         raise CustomAPIException(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -63,8 +64,16 @@ def create_payment(request, order_id):
     logger.info(f"支払いリンクの作成を開始します。order_id={order_id}, user_id={user_id}")
     try:
 
-        # 以前に支払いリンクが作成されていない場合
-        if pending_payment_order_info.payment_id is None:
+            # 以前に支払いリンクが作成されていない場合
+            if pending_payment_order_info.payment_id is not None:
+            # 以前の支払いリンクを削除
+                response = delete_paypay_qr_code(pending_payment_order_info.payment_qr_code_id)
+                if not (response['resultInfo']['code'] == 'SUCCESS' or response['resultInfo']['code'] == 'DYNAMIC_QR_NOT_FOUND'):
+                    raise CustomAPIException(
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        message="既存の支払いリンクの削除に失敗しました。",
+                        severity="error"
+                    )
             # 支払いリンクを作成
             amount = int(pending_payment_order_info.payment)
             response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
@@ -77,7 +86,6 @@ def create_payment(request, order_id):
                 payment_link_response = {
                     'status': 'success',
                     "message": "支払いリンクが正常に取得されました。",
-                    "errors": [],
                     "data": {
                         "payment_link": payment_link
                     }
@@ -87,34 +95,6 @@ def create_payment(request, order_id):
                 Order.objects.filter(order_id=order_id).update(payment_id=merchant_payment_id, payment_qr_code_id=payment_qr_code_id)
 
                 return Response(payment_link_response, status=status.HTTP_200_OK)
-        else:
-            # 以前の支払いリンクを削除
-            response = delete_paypay_qr_code(pending_payment_order_info.payment_qr_code_id)
-
-            if response['resultInfo']['code'] == 'SUCCESS' or response['resultInfo']['code'] == 'DYNAMIC_QR_NOT_FOUND':
-                # 新たな支払いリンクを作成
-                amount = int(pending_payment_order_info.payment)
-                response, merchant_payment_id = create_paypay_qr_code(order_id, amount)
-
-                if response['resultInfo']['code'] == 'SUCCESS':
-                    # 注文テーブルを更新
-                    payment_qr_code_id = response['data']['codeId']
-                    Order.objects.filter(order_id=order_id).update(payment_id=merchant_payment_id, payment_qr_code_id=payment_qr_code_id)
-                    payment_link = response['data']['url']
-                    logger.info(f"更新後の支払いリンク: {payment_link}")
-                    logger.info(f"更新後のQRコードID: {response['data']['codeId']}")
-                    logger.info(f"更新後のMerchant Payment ID: {merchant_payment_id}")
-
-                    payment_link_response = {
-                        'status': 'success',
-                        "message": "支払いリンクが正常に取得されました。",
-                        "errors": [],
-                        "data": {
-                            "payment_link": payment_link
-                        }
-                    }
-
-                    return Response(payment_link_response, status=status.HTTP_200_OK)
 
     except Exception as e:
         logger.exception(f"支払いリンク作成中に例外が発生しました。order_id={order_id}, error={str(e)}")
@@ -150,7 +130,6 @@ def create_paypay_qr_code(order_id, amount):
 def delete_paypay_qr_code(qr_code_id):
     try:
         response = client.Code.delete_qr_code(str(qr_code_id))
-        print("delete_paypay_qr_code",response)
         return response
     except Exception as e:
         logger.error(f"QRコード削除中に例外が発生しました。qr_code_id={qr_code_id}, error={str(e)}")
