@@ -30,11 +30,13 @@ def create_order(request):
     user_id = request.user_info.user_id
     # user_id ="Uf1e196438ad2e407c977f1ede4a39580" //for develop
 
-    request_product_list = request.data.get('product_list', None)
-    
+    request_product_list = request.data.get('product_list')
+
+    address_id = request.data.get('address_id')
+
     product_list, product_total_price = validate_and_prepare_products(request_product_list, user_id)
     
-    address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
+    address = UserAddress.objects.filter(address_id=address_id).first()
     
     shipping_fee = calculate_shipping_fee(address.prefecture_address)
     
@@ -253,12 +255,13 @@ def preview_order(request):
     logger.info("=== Starting get preview order ===")
 
     request_product_list = request.data.get('product_list', None)
+    address_id = request.data.get('address_id')
 
     user_id = request.user_info.user_id
 
     product_list, product_total_price = validate_and_prepare_products(request_product_list, user_id)
 
-    address = UserAddress.objects.filter(user_id=user_id, deleted_flag=False, is_default=True).first()
+    address = UserAddress.objects.filter(address_id=address_id).first()
     if address is None:
         data = {
                 "product_total_price": product_total_price,
