@@ -22,7 +22,7 @@ PAYPAY_CLIENT_ID = os.getenv("PAYPAY_CLIENT_ID")
 PAYPAY_MERCHANT_ID = os.getenv("PAYPAY_MERCHANT_ID")
 APP_HOST_NAME = os.getenv("APP_HOST_NAME")
 client = paypayopa.Client(auth=(PAYPAY_API_KEY, PAYPAY_API_SECRET),
-                          production_mode=os.getenv("IS_PRODUCTION_MODE"))
+                          production_mode=os.getenv("IS_PRODUCTION_MODE") == "True")
 client.set_assume_merchant(PAYPAY_MERCHANT_ID)
 
 # 注文の詳細を確認 --> 注文状態を確認 (未支払い状態のみ支払いリンクを作成可能) --> 以前の支払いリンクを無効化 --> PayPayに支払いリンクをリクエスト --> 支払いリンクIDを注文に更新 --> 支払いリンクを返す
@@ -53,7 +53,8 @@ def create_payment(request, order_id):
         )
 
     # 注文が24時間を超えていないか確認
-    jst_now = timezone.now()
+    #jst_now = timezone.now()
+    jst_now = datetime.now()
     if jst_now - pending_payment_order_info.created_at > timedelta(PAYMENT_TIMEOUT_HOURS):
         raise CustomAPIException(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
