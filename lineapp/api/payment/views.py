@@ -53,8 +53,7 @@ def create_payment(request, order_id):
         )
 
     # 注文が24時間を超えていないか確認
-    #jst_now = timezone.now()
-    jst_now = datetime.now()
+    jst_now = timezone.now()
     if jst_now - pending_payment_order_info.created_at > timedelta(PAYMENT_TIMEOUT_HOURS):
         raise CustomAPIException(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
