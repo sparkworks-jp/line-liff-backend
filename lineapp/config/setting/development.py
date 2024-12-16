@@ -1,6 +1,16 @@
 import os
 from .base import *
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+ALLOWED_HOSTS = ['*']
+
+# CROS
+CORS_ALLOW_ALL_ORIGINS = True  
+CORS_ALLOW_CREDENTIALS = True
+
+# Database
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
      'default': {
         'ENGINE': 'django.db.backends.postgresql',  
@@ -20,6 +30,7 @@ DATABASES = {
         },
     }
 }
+WSGI_APPLICATION = 'config.wsgi.application'
 
 # 実行SQLを標準出力に出力する
 LOGGING = {
@@ -56,9 +67,10 @@ LOGGING = {
     },
 }
 
-# CROS
-ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS = True  
-CORS_ALLOW_CREDENTIALS = True
+
+# paypay
+PAYPAY_IP_WHITELIST = "13.112.237.64,52.199.148.9,54.199.212.149,13.208.106.122,13.208.115.200,13.208.152.196" 
+
+
 
 

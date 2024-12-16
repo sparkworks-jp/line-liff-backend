@@ -5,7 +5,6 @@ import sys
 import logging
 
 logger = logging.getLogger('django')
-print("DJANGO_SETTINGS_MODULE =", os.environ.get("DJANGO_SETTINGS_MODULE")) 
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.setting.development')

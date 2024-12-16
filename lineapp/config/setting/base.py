@@ -22,12 +22,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-+4&d!+r#1k96_jxa@#10wp$ve50hh%v%i8=k^y)v9f+yf^kkf+'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
-
-
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
@@ -42,7 +36,6 @@ INSTALLED_APPS = [
     'api.chat', 
     'api.payment', 
     'tests',
-
 ]
 
 MIDDLEWARE = [
@@ -59,7 +52,6 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:9000",
     "http://localhost:8000",
-
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -130,8 +122,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -159,7 +149,6 @@ LOGGING = {
         },
     },
 }
-
 logging.config.dictConfig(LOGGING)
 
 AUTH_PASSWORD_VALIDATORS = [
