@@ -47,25 +47,22 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'levelname_message'
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': 'django.log',
-            'formatter': 'levelname_message',
-            'encoding': 'utf-8'
-        },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
         },
         'django.db.backends': {
             'level': 'DEBUG',
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'propagate': False,
         },
     },
 }
+
+
+
 
 
 # paypay
