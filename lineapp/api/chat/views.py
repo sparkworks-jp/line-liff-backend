@@ -75,10 +75,7 @@ def handle_text_message(event):
             # そのため、同期関数内で非同期コードを実行する必要があります,イベントループがその架け橋となります
             response = loop.run_until_complete(chat_by_line(event.message.text))
             logger.info("メッセージ処理が完了しました")     
-            if response.get('history_data'):
-                logger.info(f"非同期履歴の保存処理開始: {datetime.now()}")
-                loop.create_task(save_history_async(response['history_data']))
-                logger.info("履歴の保存が完了しました")
+
             flex_message = {
                 "type": "carousel",
                 "contents": [
@@ -107,6 +104,22 @@ def handle_text_message(event):
                 FlexSendMessage(alt_text='Flexメッセージ', contents=flex_message)
             )
             logger.info(f"メッセージ送信が完了しました: {datetime.now()}")
+
+            if response.get('history_data'):
+                def run_async_save():
+                    save_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(save_loop)
+                    try:
+                        save_loop.run_until_complete(save_history_async(response['history_data']))
+                    finally:
+                        save_loop.close()
+
+                import threading
+                save_thread = threading.Thread(target=run_async_save)
+                save_thread.daemon = True
+                # 「daemon=True」は通常実行時の履歴保存に影響を与えません。デーモンは自身のタスクではなく、メインプログラムを守護します
+                # サーバーのシャットダウン時に、履歴保存の待機によってシステムが停止できなくなることを防ぎ、正常な終了を可能にするためのものです
+                save_thread.start()
 
         finally:
             loop.close()
@@ -139,10 +152,7 @@ async def poll_run_status(client, thread_id, run_id, max_attempts=100, delay=0.5
 async def save_history(history_data, max_retries=3):
     """Save chat ChatHistory with retry mechanism"""
     for attempt in range(max_retries):
-        try:
-            # logger.info("开始存储历史记录，等待60秒...")
-            # # 模拟耗时操作
-            # await asyncio.sleep(60)  
+        try:           
             await sync_to_async(ChatHistory.objects.create)(**history_data)
             logger.info(f"ChatHistory saved successfully for thread {history_data['thread_id']}")
             return
