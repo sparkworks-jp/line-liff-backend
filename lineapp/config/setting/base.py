@@ -52,6 +52,12 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:9000",
     "http://localhost:8000",
+    "https://plainly-helping-quetzal.ngrok-free.app"
+]
+CORS_ALLOW_HEADERS = [
+    'Authorization',  
+    'Content-Type',
+    'ngrok-skip-browser-warning'
 ]
 
 ROOT_URLCONF = 'config.urls'
