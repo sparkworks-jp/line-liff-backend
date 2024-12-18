@@ -21,12 +21,34 @@ logger = logging.getLogger("django")
 # Line Bot配置
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-
 api_key = os.getenv('OPEN_AI_API_KEY')
 assistant_id = os.getenv('OPENAI_ASSISTANT_ID')
 
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 webhook_handler = WebhookHandler(CHANNEL_SECRET)
+
+# DjangoのCSRF保護をスキップ
+@csrf_exempt 
+@require_POST
+@api_view(['POST'])
+def line_webhook(request):
+    """Line Webhookのリクエスト処理"""
+    logger.info("LINE Webhookリクエストを受信しました")
+    try:
+        signature = request.headers['X-Line-Signature']
+        logger.info(f"署名を検証します: {signature}")
+        body = request.body.decode()
+        webhook_handler.handle(body, signature)
+        logger.info("Webhookの処理が正常に完了しました")
+        return Response('OK')
+        
+    except InvalidSignatureError:
+        logger.error("無効な署名です")
+        return Response('Invalid signature')
+    except Exception as e:
+        logger.error(f"Webhook ERROR: {str(e)}")
+        return Response(status=500)
+    
 
 @webhook_handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
@@ -39,16 +61,23 @@ def handle_text_message(event):
             event.reply_token,
             TextSendMessage(text="検索中です。しばらくお待ちください...")
         )
-
+        # asyncio　イベントループを作成
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         try:
-            # 获取AI响应
+            # AI　response　取得
+            # 注意点: 
+            # 何で直接的な非同期書き方はダメ？　例　response = await chat_by_line(event.message.text)
+            # 而是用asyncio　イベントループ的loop.run_until_complete间接调用chat_by_line
+            # handle_text_message` は同期関数です
+            # これは LINE Bot SDK の webhook handler が非同期関数に対応していないためです
+            # そのため、同期関数内で非同期コードを実行する必要があります,イベントループがその架け橋となります
             response = loop.run_until_complete(chat_by_line(event.message.text))
             logger.info("メッセージ処理が完了しました")     
             if response.get('history_data'):
-                save_task = loop.create_task(save_history_async(response['history_data']))
+                logger.info(f"非同期履歴の保存処理開始: {datetime.now()}")
+                loop.create_task(save_history_async(response['history_data']))
                 logger.info("履歴の保存が完了しました")
             flex_message = {
                 "type": "carousel",
@@ -77,12 +106,9 @@ def handle_text_message(event):
                 event.source.user_id,
                 FlexSendMessage(alt_text='Flexメッセージ', contents=flex_message)
             )
-            logger.info("メッセージ送信が完了しました")
+            logger.info(f"メッセージ送信が完了しました: {datetime.now()}")
 
         finally:
-            loop.run_forever()
-            loop.call_soon_threadsafe(loop.stop)
-            loop.run_until_complete(loop.shutdown_asyncgens())
             loop.close()
 
     except Exception as e:
@@ -92,27 +118,7 @@ def handle_text_message(event):
             TextSendMessage(text="メッセージの処理中にエラーが発生しました。")
         )
 
-@csrf_exempt
-@require_POST
-@api_view(['POST'])
-def line_webhook(request):
-    """Line Webhookのリクエスト処理"""
-    logger.info("LINE Webhookリクエストを受信しました")
-    try:
-        signature = request.headers['X-Line-Signature']
-        logger.info(f"署名を検証します: {signature}")
-        body = request.body.decode()
-        
-        webhook_handler.handle(body, signature)
-        logger.info("Webhookの処理が正常に完了しました")
-        return Response('OK')
-        
-    except InvalidSignatureError:
-        logger.error("無効な署名です")
-        return Response('Invalid signature')
-    except Exception as e:
-        logger.error(f"Webhook ERROR: {str(e)}")
-        return Response(status=500)
+
 
 async def poll_run_status(client, thread_id, run_id, max_attempts=100, delay=0.5):
     """Poll OpenAI run status until completion or timeout"""
@@ -134,6 +140,9 @@ async def save_history(history_data, max_retries=3):
     """Save chat ChatHistory with retry mechanism"""
     for attempt in range(max_retries):
         try:
+            # logger.info("开始存储历史记录，等待60秒...")
+            # # 模拟耗时操作
+            # await asyncio.sleep(60)  
             await sync_to_async(ChatHistory.objects.create)(**history_data)
             logger.info(f"ChatHistory saved successfully for thread {history_data['thread_id']}")
             return
@@ -147,10 +156,12 @@ async def save_history(history_data, max_retries=3):
 
 async def save_history_async(history_data):
     try:
+        #  履歴の保存を試み
         logger.info(f"開始履歴保存 - Thread ID: {history_data.get('thread_id')}")
         await save_history(history_data)
         logger.info(f"履歴保存成功 - Thread ID: {history_data.get('thread_id')}")
     except Exception as e:
+        # 保存失敗時、エラーをログに記録 
         error_message = f"""
                         データベース保存エラー
                         Time: {datetime.now()}
