@@ -11,7 +11,6 @@ from rest_framework.response import Response
 
 from common.constants import OrderStatus
 from common.ip_check import ip_whitelist_required
-from common.exceptions import CustomAPIException
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +36,16 @@ def payment_status_webhook(request):
         f"payment_status_webhook: merchant_order_id={merchant_order_id}, order_amount={order_amount}, state={state}, paid_at={paid_at}")
 
     if not merchant_order_id or not state:
-        raise CustomAPIException(
-            status=status.HTTP_400_BAD_REQUEST,
-            message="Invalid data Missing required parameters (merchant_order_id or not state)",
-            severity="error"
-        )
+        response = {
+            "status": "error",
+            "message": "Invalid data",
+            "errors": [{
+                "code": 400,
+                "message": "Invalid data"
+            }],
+            "data": {}
+        }
+        return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
     order_info = Order.objects.filter(payment_id=merchant_order_id).first()
 
@@ -65,49 +69,26 @@ def payment_status_webhook(request):
                     order_info.save()
 
                     logger.info(f"Order {merchant_order_id} successfully updated to PAID.")
-                    return Response(  
-                        {
-                            "status": "success",
-                            "message": "OK"
-                        }, 
-                        status=status.HTTP_200_OK
-                    )
+                    return Response({"message": "OK"}, status=status.HTTP_200_OK)
+
                 elif str(order_info.payment) != order_amount:
                     # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
                     logger.error(
                         f"Incorrect payment amount for order_id:{order_info.order_id}, payment_id:{order_info.payment_id}")
-                    raise CustomAPIException(
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            message="warring",
-                            severity=""
-                        )
+                    return Response({"message": "OK"}, status=status.HTTP_200_OK)
 
                 elif order_info.status != OrderStatus.PENDING_PAYMENT:
                     # 支払い通知にエラーが発生した場合、管理者にSlackやその他の通知手段でアラートを送信します。
                     logger.error(
                         f"Order status error! order_id:{order_info.order_id}, order_status:{order_info.status}, payment_id:{order_info.payment_id}")
-                    raise CustomAPIException(
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            message="warring",
-                            severity=""
-                        )
+                    return Response({"message": "OK"}, status=status.HTTP_200_OK)
 
             logger.error(f"Unexpected state or order issue for order_id:{order_info.order_id}, state:{state}")
-            return Response(
-                {
-                    "status": "success",
-                    "message": "OK"
-                }, 
-                status=status.HTTP_200_OK
-            )
+            return Response({"message": "OK"}, status=status.HTTP_200_OK)
 
     except Exception as e:
         logger.error(f"Error processing payment webhook for order_id:{merchant_order_id}. Exception: {str(e)}")
-        raise CustomAPIException(
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            message="paypay webhook Internal Server Error",
-            severity=""
-        )
+        return Response({"message": "Internal Server Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Client.__init__() got an unexpected keyword argument 'proxies'
